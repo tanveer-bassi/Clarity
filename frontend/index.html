@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clarity | Read the fine print</title>
+    <meta name="description"
+        content="Clarity scans legal and medical documents, flags risk, and explains what the document means before you sign.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;600;700;800&display=swap"
+        rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
+        rel="stylesheet" />
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="stylesheet" href="index.css">
+</head>
+
+<body>
+
+    <header aria-label="Main navigation">
+        <div class="brand" id="brand-home">
+            <img src="assets/logo.svg" alt="Clarity" class="brand-logo">
+            <div class="brand-name">Clarity</div>
+        </div>
+
+        <nav class="topnav">
+            <button class="nav-item" data-screen="landing">Scan</button>
+            <button class="nav-item" data-screen="vault">Vault</button>
+            <button class="nav-item" data-screen="dashboard">Insights</button>
+            <button class="nav-item" data-screen="security">Security</button>
+        </nav>
+
+        <div class="topbar-actions">
+            <button class="btn btn-primary" id="header-scan-trigger">Scan document</button>
+        </div>
+    </header>
+
+    <main class="shell app-shell">
+        <section class="screen is-active" id="screen-landing" data-screen="landing">
+            <div class="hero-centered reveal">
+                <h1>Read the fine print. With total <span class="text-accent">Clarity</span>.</h1>
+                <p class="lede">Clarity uses <strong>vision-first AI</strong> to scan medical forms and legal contracts,
+                    instantly surfacing <strong>hidden risks</strong> and complex liability before you sign.</p>
+                <div class="hero-actions centered">
+                    <button class="btn btn-primary btn-large" id="landing-upload">Start Analysis</button>
+                    <button class="btn btn-secondary btn-large" data-screen="vault">View Vault</button>
+                </div>
+
+                <div class="section-divider reveal reveal-delay-2">
+                    <div class="divider-text">The Clarity Process</div>
+                </div>
+
+                <div class="how-it-works reveal reveal-delay-3">
+                    <div class="section-header-centered">
+                        <div class="eyebrow">The Clarity Lifecycle</div>
+                        <h2>Autonomous Intelligence for Every Clause</h2>
+                    </div>
+
+                    <div class="lifecycle-grid">
+                        <div class="lifecycle-card card-blue-impact">
+                            <div class="card-kicker">01 / INGESTION</div>
+                            <h3>Vision-First Understanding</h3>
+                            <p>Unlike standard OCR, Clarity understands document structure in physical space, capturing
+                                latent context that traditional systems miss.</p>
+                            <div class="scan-visual">
+                                <div class="scan-line"></div>
+                            </div>
+                        </div>
+
+                        <div class="lifecycle-card card-glass-impact">
+                            <div class="card-kicker">02 / ANALYSIS</div>
+                            <h3>Relational Risk Mapping</h3>
+                            <p>Our graph-based AI maps the direct relationship between every clause to identify hidden
+                                asymmetric liabilities.</p>
+                            <div class="graph-dots">
+                                <span></span><span></span><span></span><span></span>
+                            </div>
+                        </div>
+
+                        <div class="lifecycle-card card-white-impact">
+                            <div class="card-kicker">03 / TRANSLATION</div>
+                            <h3>Plain English Rewriting</h3>
+                            <p>Complex legalese is distilled into actionable briefs, allowing you to understand your
+                                legal exposure in seconds.</p>
+                            <div class="redline-pill-box">
+                                <span class="redline-tag">INDEMNITY</span>
+                                <span class="material-symbols-rounded">arrow_forward</span>
+                                <span class="redline-tag">PROTECTION</span>
+                            </div>
+                        </div>
+
+                        <div class="lifecycle-card card-dark-impact">
+                            <div class="card-kicker">04 / PROTECTION</div>
+                            <h3>Zero-Knowledge Vault</h3>
+                            <p>Analysis and documents are secured in a locally-encrypted vault, ensuring your sensitive
+                                data never leaves your environment.</p>
+                            <div class="lock-shield">
+                                <span class="material-symbols-rounded">shield_person</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-divider reveal reveal-delay-4">
+                    <div class="divider-text">Intelligence at Scale</div>
+                </div>
+
+                <div class="feature-section reveal reveal-delay-4">
+                    <div class="feature-grid">
+                        <article class="feature-card">
+                            <img src="assets/analysis_v2.png" alt="analysis" class="feature-img">
+                            <h3>Risk Mapping</h3>
+                            <p>Instantly highlight indemnification and liability shifts with visual
+                                document overlays.
+                            </p>
+                        </article>
+                        <article class="feature-card">
+                            <img src="assets/vault_v2.png" alt="vault" class="feature-img">
+                            <h3>Secure Vault</h3>
+                            <p>Organize and search your signed history with automatic OCR categorization
+                                and tags.</p>
+                        </article>
+                        <article class="feature-card">
+                            <img src="assets/insights_v2.png" alt="insights" class="feature-img">
+                            <h3>Liability Insights</h3>
+                            <p>Track common risk patterns across multiple providers or legal entities
+                                over time.</p>
+                        </article>
+                        <article class="feature-card">
+                            <img src="assets/security_v2.png" alt="security" class="feature-img">
+                            <h3>Privacy First</h3>
+                            <p>Zero-knowledge encryption ensures your sensitive legal data remains
+                                private to you.</p>
+                        </article>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="screen" id="screen-camera" data-screen="camera">
+            <div class="camera-layout reveal">
+                <div class="camera-header">
+                    <div>
+                        <div class="eyebrow">Mobile-first capture</div>
+                        <h2>Capture the full page clearly</h2>
+                    </div>
+                    <button class="btn btn-ghost" data-screen="landing">Back</button>
+                </div>
+
+                <div class="camera-frame glass-card">
+                    <div class="camera-overlay"></div>
+                    <div class="document-guide">
+                        <div class="guide-corners"></div>
+                        <div class="guide-label">Align document within frame</div>
+                    </div>
+                    <div class="camera-status">
+                        <span class="pill dark">Auto-detect active</span>
+                        <span class="pill dark">A4 detected</span>
+                    </div>
+                </div>
+
+                <div class="camera-controls">
+                    <button class="capture-secondary" data-toast="Camera reset">Retake</button>
+                    <button class="capture-primary" id="camera-capture">Use photo</button>
+                    <button class="capture-secondary" id="camera-upload">Upload from files</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="screen" id="screen-processing" data-screen="processing">
+            <div class="processing-grid">
+                <div class="doc-preview glass-card reveal">
+                    <div class="doc-preview-header">
+                        <div class="eyebrow">Document in analysis</div>
+                        <h2 id="processing-file-name">Hospital_Consent_Form.pdf</h2>
+                    </div>
+                    <div class="doc-sheet">
+                        <div class="doc-scan-line"></div>
+                        <div class="doc-badge">ANALYSIS ACTIVE</div>
+                    </div>
+                    <p class="support-copy">Backend hook: replace this mock with the uploaded file name, page count,
+                        and Vision preview when your teammate connects the API.</p>
+                </div>
+
+                <div class="processing-panel glass-card reveal reveal-delay-2">
+                    <div class="panel-topline">
+                        <div>
+                            <div class="eyebrow">Decision brief pipeline</div>
+                            <h2 id="processing-title">Building your decision brief</h2>
+                        </div>
+                        <span class="pill">Live</span>
+                    </div>
+
+                    <div class="process-steps" id="process-steps">
+                        <div class="process-step is-complete">
+                            <div class="process-dot">check</div>
+                            <div>
+                                <h3>Reading layout</h3>
+                                <p>Paragraphs, signature zones, and document structure identified.</p>
+                            </div>
+                        </div>
+                        <div class="process-step is-complete">
+                            <div class="process-dot">check</div>
+                            <div>
+                                <h3>Extracting text</h3>
+                                <p>High-confidence OCR preserved in reading order.</p>
+                            </div>
+                        </div>
+                        <div class="process-step is-active">
+                            <div class="process-dot">sync</div>
+                            <div>
+                                <h3>Detecting clauses</h3>
+                                <p id="processing-status">Scoring liability, arbitration, and waiver language.</p>
+                            </div>
+                        </div>
+                        <div class="process-step">
+                            <div class="process-dot">radio_button_unchecked</div>
+                            <div>
+                                <h3>Scoring risk</h3>
+                                <p>Severity and confidence are being calculated.</p>
+                            </div>
+                        </div>
+                        <div class="process-step">
+                            <div class="process-dot">radio_button_unchecked</div>
+                            <div>
+                                <h3>Explaining in plain language</h3>
+                                <p>Rewriting the risky parts for a non-lawyer.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="processing-actions">
+                        <button class="btn btn-ghost" data-screen="landing">Cancel</button>
+                        <button class="btn btn-primary" id="processing-continue">View early findings</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="screen" id="screen-dashboard" data-screen="dashboard">
+            <div class="shell">
+                <div class="dashboard-intro reveal">
+                    <div>
+                        <div class="eyebrow">Insights overview</div>
+                        <h2>Understand the risk before you sign</h2>
+                        <p>Clarity breaks the document into the few issues that matter most so you can decide whether to
+                            sign, negotiate, or get help.</p>
+                    </div>
+                    <div class="dashboard-intro-note">
+                        <div class="dashboard-note-label">Status</div>
+                        <p>Analysis complete. You can now redline findings or upload a new agreement.</p>
+                        <button class="btn btn-primary btn-small" id="header-insights-upload"
+                            style="margin-top:1rem">Scan new document</button>
+                    </div>
+                    <div class="dashboard-shell reveal reveal-delay-2">
+                        <div class="discovery-hero">
+                            <div class="discovery-main glass-card">
+                                <div class="discovery-score">
+                                    <div class="score-ring" id="score-ring">
+                                        <svg viewBox="0 0 220 220" aria-hidden="true">
+                                            <circle class="ring-base" cx="110" cy="110" r="92"></circle>
+                                            <circle class="ring-progress" cx="110" cy="110" r="92"></circle>
+                                        </svg>
+                                        <div class="score-center">
+                                            <div class="score-number" id="score-number">82</div>
+                                            <div class="score-label">Risk Score</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="discovery-copy">
+                                    <div class="eyebrow">Executive Verdict</div>
+                                    <h2>High-Risk Exposure Detected</h2>
+                                    <p>This document contains asymmetric liability structures and aggressive termination
+                                        hooks. We recommend a professional legal review before execution.</p>
+                                    <div class="discovery-tags">
+                                        <div class="discovery-tag-pill active red">
+                                            <span class="material-symbols-rounded">warning</span>
+                                            3 Critical Flags
+                                        </div>
+                                        <div class="discovery-tag-pill">
+                                            <span class="material-symbols-rounded">verified</span>
+                                            14 Standard Clauses
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="discovery-side">
+                                <div class="bottom-line-card glass-card">
+                                    <div class="eyebrow">Bottom Line</div>
+                                    <p>SIGNING AS-IS: You are accepting <strong>300% more</strong> financial liability
+                                        than typical market standards.</p>
+                                    <button class="btn btn-secondary btn-full" id="insights-scan-trigger">Scan
+                                        another</button>
+                                </div>
+                                <div class="action-card-mini reveal reveal-delay-3">
+                                    <button class="btn btn-primary btn-full" id="save-to-vault">Save to Vault</button>
+                                    <button class="btn btn-secondary btn-full" data-screen="report">Generate
+                                        Report</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-divider"></div>
+
+                    <div class="section-header-compact reveal">
+                        <div class="section-title-group">
+                            <div class="eyebrow">Priority Findings</div>
+                            <h3>The clauses worth reviewing first</h3>
+                        </div>
+                        <p>Start with the highest-risk item, then work through the contractual leverage issues below.
+                        </p>
+                    </div>
+
+                    <section class="findings-grid findings-grid-dashboard">
+                        <!-- Cards -->
+                        <article class="finding-card finding-card-featured risk-critical reveal">
+                            <div class="finding-head">
+                                <span class="risk-badge critical">Critical</span>
+                                <span class="finding-icon" aria-hidden="true">!</span>
+                            </div>
+                            <div class="finding-copy">
+                                <h3>Uncapped liability</h3>
+                                <p class="finding-summary"><strong>Plain English:</strong> You could be exposed to
+                                    unlimited
+                                    cost if something goes
+                                    wrong.</p>
+                            </div>
+                            <div class="legal-box">“Tenant shall be liable for all damages, whether direct or indirect,
+                                without
+                                limitation of any kind...”</div>
+                            <button class="text-link" data-screen="clause">View full clause</button>
+                        </article>
+
+                        <article class="finding-card risk-warning reveal reveal-delay-2">
+                            <div class="finding-head">
+                                <span class="risk-badge warning">Warning</span>
+                                <span class="finding-icon" aria-hidden="true">24h</span>
+                            </div>
+                            <div class="finding-copy">
+                                <h3>24-hour termination</h3>
+                                <p class="finding-summary"><strong>Plain English:</strong> The other party can end the
+                                    agreement almost immediately.</p>
+                            </div>
+                            <div class="legal-box">“Landlord may terminate this lease for convenience with 24 hours
+                                written
+                                notice...”</div>
+                            <button class="text-link" data-screen="clause">View full clause</button>
+                        </article>
+
+                        <article class="finding-card risk-warning reveal reveal-delay-3">
+                            <div class="finding-head">
+                                <span class="risk-badge warning">Warning</span>
+                                <span class="finding-icon" aria-hidden="true">+15%</span>
+                            </div>
+                            <div class="finding-copy">
+                                <h3>Aggressive rent escalator</h3>
+                                <p class="finding-summary"><strong>Plain English:</strong> Your costs will rise faster
+                                    than
+                                    normal inflation every year.</p>
+                            </div>
+                            <div class="legal-box">“Rent shall increase by 15% annually or CPI plus 10%, whichever is
+                                greater...”</div>
+                            <button class="text-link" data-screen="clause">View full clause</button>
+                        </article>
+
+                        <article class="finding-card risk-caution reveal reveal-delay-4">
+                            <div class="finding-head">
+                                <span class="risk-badge caution">Caution</span>
+                                <span class="finding-icon" aria-hidden="true">ADR</span>
+                            </div>
+                            <div class="finding-copy">
+                                <h3>Mandatory Arbitration</h3>
+                                <p class="finding-summary"><strong>Plain English:</strong> You waive your right to a
+                                    jury
+                                    trial for any legal issues.</p>
+                            </div>
+                            <div class="legal-box">“All disputes shall be settled by binding arbitration in Delaware
+                                under
+                                AAA
+                                rules...”</div>
+                            <button class="text-link" data-screen="clause">View full clause</button>
+                        </article>
+                    </section>
+        </section>
+
+        <section class="screen" id="screen-security" data-screen="security">
+            <div class="shell">
+                <div class="hero-copy reveal">
+                    <div class="eyebrow">Privacy & Trust</div>
+                    <h1>Security Posture</h1>
+                    <p>Clarity is built on a vision-first security model. We ensure your legal data never leaves your
+                        trusted environment without explicit consent.</p>
+                </div>
+
+                <div class="findings-grid">
+                    <div class="finding-card glass-card reveal reveal-delay-1">
+                        <h3>Local-First Analysis</h3>
+                        <p>Our AI analyzes documents in a sandbox, extracting risk signatures without storing your
+                            sensitive trade secrets.</p>
+                    </div>
+                    <div class="finding-card glass-card reveal reveal-delay-2">
+                        <h3>AES-256 Memory</h3>
+                        <p>The Clarity Vault uses industry-standard encryption to lock down your signed documents and
+                            analysis history.</p>
+                    </div>
+                    <div class="finding-card glass-card reveal reveal-delay-3">
+                        <h3>Source Verification</h3>
+                        <p>Every finding is linked directly to the document source, ensuring the AI never hallucinates
+                            legal risks.</p>
+                    </div>
+                    <div class="finding-card glass-card reveal reveal-delay-4">
+                        <h3>Audit Hooks</h3>
+                        <p>Every action taken—from redlining to sharing—is tracked for your internal compliance records.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="screen" id="screen-clause" data-screen="clause">
+            <div class="detail-layout">
+                <div class="detail-main reveal">
+                    <div class="detail-top">
+                        <span class="risk-badge critical" id="clause-badge">High risk flag</span>
+                        <h2 id="clause-title">Liability limitation and indemnity</h2>
+                        <p id="clause-subtitle">Clause 14.2 — Terms of Service Agreement</p>
+                    </div>
+
+                    <div class="legal-panel dark-card">
+                        <h3>Original clause</h3>
+                        <p id="clause-original">“The User hereby agrees to indemnify, defend, and hold harmless
+                            Clarity and its affiliates from any and all claims, losses, liabilities, and legal
+                            expenses arising from use of the service...”</p>
+                    </div>
+
+                    <div class="detail-card glass-card">
+                        <h3>Plain English</h3>
+                        <p id="clause-plain">If something tied to your use of the platform creates a dispute, you may
+                            end up paying the company’s legal costs and related losses.</p>
+                    </div>
+                </div>
+
+                <aside class="detail-side reveal reveal-delay-2">
+                    <div class="detail-card glass-card">
+                        <h3>What this could change for you</h3>
+                        <div class="impact-list">
+                            <div class="impact-item">
+                                <h4 id="impact-title-1">Financial exposure</h4>
+                                <p id="impact-copy-1">This clause can shift major legal costs onto you.</p>
+                            </div>
+                            <div class="impact-item">
+                                <h4 id="impact-title-2">Indefinite liability</h4>
+                                <p id="impact-copy-2">The obligation can survive even after the agreement ends.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="detail-card glass-card">
+                        <h3>Next action</h3>
+                        <p>Ask for a liability cap, remove survival language where possible, and tie exposure to a
+                            defined dollar amount.</p>
+                        <div class="stack-actions">
+                            <button class="btn btn-secondary" data-screen="viewer">View in document</button>
+                            <button class="btn btn-secondary" data-screen="report">Share clause</button>
+                            <button class="btn btn-primary" id="next-clause">Next flagged clause</button>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+        </section>
+
+        <section class="screen" id="screen-viewer" data-screen="viewer">
+            <div class="viewer-layout">
+                <div class="viewer-canvas reveal">
+                    <div class="viewer-toolbar glass-card">
+                        <button class="btn btn-ghost" data-screen="dashboard">Back to results</button>
+                        <div class="viewer-zoom">
+                            <button class="icon-button" id="zoom-out">remove</button>
+                            <span id="zoom-label">100%</span>
+                            <button class="icon-button" id="zoom-in">add</button>
+                        </div>
+                        <button class="btn btn-secondary" data-screen="clause">Open full detail</button>
+                    </div>
+
+                    <div class="document-canvas" id="document-canvas">
+                        <div class="document-page">
+                            <h3>Master Services Agreement</h3>
+                            <p class="doc-line">1. Scope of Services. Vendor shall provide the services described in
+                                Exhibit A.</p>
+                            <p class="doc-line doc-risk critical">2. Liability and Indemnification. Each party’s total
+                                aggregate liability is limited to the fees paid in the preceding three months.</p>
+                            <p class="doc-line doc-risk warning">3. Termination. Vendor may terminate this agreement at
+                                any time without cause upon twenty-four hours written notice.</p>
+                            <p class="doc-line">4. Intellectual Property. Deliverables remain the sole property of the
+                                vendor except where otherwise agreed.</p>
+                            <p class="doc-line doc-risk critical">5. Governing Law. Any disputes shall be resolved
+                                exclusively under the laws of the Cayman Islands.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <aside class="viewer-sidebar glass-card reveal reveal-delay-2">
+                    <div class="eyebrow">Clarity findings</div>
+                    <h2>Map risk to source</h2>
+                    <div class="sidebar-finding">
+                        <span class="risk-badge critical">Critical</span>
+                        <h3>Capped liability</h3>
+                        <p>Recovery is limited to a narrow three-month window.</p>
+                        <div class="sidebar-actions">
+                            <button class="text-link" data-screen="clause">Risk analysis</button>
+                            <button class="text-link" data-modal="redline">Suggest redline</button>
+                        </div>
+                    </div>
+                    <div class="sidebar-finding">
+                        <span class="risk-badge warning">Warning</span>
+                        <h3>Termination convenience</h3>
+                        <p>No transition support is guaranteed if the other party exits.</p>
+                        <div class="sidebar-actions">
+                            <button class="text-link" data-screen="clause">Risk analysis</button>
+                            <button class="text-link" data-modal="compare">Compare versions</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" data-screen="report">Generate risk report</button>
+                </aside>
+            </div>
+        </section>
+
+        <section class="screen" id="screen-vault" data-screen="vault">
+            <div class="vault-header reveal">
+                <div>
+                    <div class="eyebrow">Consent memory</div>
+                    <h2>Your vault</h2>
+                    <p>A clear record of every document you reviewed, what risk it carried, and what changed over
+                        time.</p>
+                </div>
+                <div class="vault-actions">
+                    <button class="btn btn-secondary" data-modal="compare">Compare documents</button>
+                    <button class="btn btn-primary" id="vault-scan-trigger">Scan new document</button>
+                </div>
+            </div>
+
+            <div class="vault-stats">
+                <div class="metric-card reveal">
+                    <div class="metric-value">24</div>
+                    <div class="metric-label">Processed</div>
+                </div>
+                <div class="metric-card reveal reveal-delay-2">
+                    <div class="metric-value">02</div>
+                    <div class="metric-label">High Risk</div>
+                </div>
+                <div class="metric-card reveal reveal-delay-3">
+                    <div class="metric-value">82%</div>
+                    <div class="metric-label">Average Score</div>
+                </div>
+            </div>
+
+            <div class="vault-list">
+                <article class="vault-item glass-card reveal">
+                    <div class="vault-item-top">
+                        <div class="eyebrow vault-kicker">Recent scan</div>
+                        <div class="vault-score-badge high">
+                            <span class="vault-score-number">82</span>
+                            <span class="vault-score-copy">High risk</span>
+                        </div>
+                    </div>
+                    <div class="vault-info">
+                        <div class="vault-title">Mortgage Disclosure Agreement</div>
+                        <div class="vault-meta">First National Horizon Bank · Oct 24, 2026</div>
+                        <p class="vault-summary">Flagged liability exposure, accelerated repayment terms, and limited
+                            dispute windows.</p>
+                    </div>
+                    <div class="vault-buttons">
+                        <button class="btn btn-primary" data-screen="dashboard">Open analysis</button>
+                        <button class="btn btn-secondary" data-screen="report">View report</button>
+                    </div>
+                </article>
+
+                <article class="vault-item glass-card reveal reveal-delay-2">
+                    <div class="vault-item-top">
+                        <div class="eyebrow vault-kicker">Needs review</div>
+                        <div class="vault-score-badge medium">
+                            <span class="vault-score-number">61</span>
+                            <span class="vault-score-copy">Watchlist</span>
+                        </div>
+                    </div>
+                    <div class="vault-info">
+                        <div class="vault-title">Surgery Consent Form</div>
+                        <div class="vault-meta">North Shore Medical · Oct 22, 2026</div>
+                        <p class="vault-summary">Marked broad consent language and weak cancellation protections for
+                            follow-up.</p>
+                    </div>
+                    <div class="vault-buttons">
+                        <button class="btn btn-primary" data-screen="dashboard">Open analysis</button>
+                        <button class="btn btn-secondary" data-screen="report">View report</button>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="screen" id="screen-report" data-screen="report">
+            <div class="report-toolbar reveal">
+                <div>
+                    <div class="eyebrow">Shareable output</div>
+                    <h2>Decision report</h2>
+                </div>
+                <div class="report-buttons">
+                    <button class="btn btn-secondary" id="copy-report-link">Copy link</button>
+                    <button class="btn btn-secondary" id="download-pdf">Download PDF</button>
+                    <button class="btn btn-primary" data-modal="lawyer">Send to lawyer</button>
+                </div>
+            </div>
+
+            <div class="report-sheet reveal reveal-delay-2">
+                <div class="report-sheet-header">
+                    <div>
+                        <div class="eyebrow">Legal analysis report</div>
+                        <h3>Commercial Lease Agreement v2</h3>
+                        <p>Generated from the current document state. Replace this mock with backend report data when
+                            the analysis API is connected.</p>
+                    </div>
+                    <div class="mini-score">
+                        <div class="mini-score-number">75</div>
+                        <div class="mini-score-label">High risk</div>
+                    </div>
+                </div>
+
+                <div class="report-grid">
+                    <div class="report-block">
+                        <h4>Executive summary</h4>
+                        <p>This document contains three clauses that materially change the risk profile of the
+                            agreement: uncapped liability, accelerated termination, and aggressive cost escalation.</p>
+                    </div>
+                    <div class="report-block">
+                        <h4>Top recommendation</h4>
+                        <p>Negotiate a liability cap, extend termination notice, and tie escalators to a market-normal
+                            benchmark before signing.</p>
+                    </div>
+                    <div class="report-block full">
+                        <h4>Findings snapshot</h4>
+                        <ul class="report-list">
+                            <li>Critical: liability recovery window is unusually narrow</li>
+                            <li>Warning: termination can happen with only 24 hours notice</li>
+                            <li>Warning: annual cost escalation exceeds typical lease growth</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="shell footer-grid">
+            <div class="footer-brand">
+                <div class="brand">
+                    <img src="assets/logo.svg" alt="Clarity" class="brand-logo">
+                    <div class="brand-name">Clarity</div>
+                </div>
+                <p class="footer-tagline">Vision-first AI for legal risk management.</p>
+                <div class="system-status">
+                    <span class="status-dot"></span>
+                    All systems operational
+                </div>
+            </div>
+            <div class="footer-nav">
+                <div class="footer-col">
+                    <h5>Resources</h5>
+                    <ul>
+                        <li><a href="#">Mobile</a> <span class="badge">New</span></li>
+                        <li><a href="#">Manifesto</a></li>
+                        <li><a href="#">Press</a></li>
+                        <li><a href="#">Bug Bounty</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h5>Support</h5>
+                    <ul>
+                        <li><a href="#">Help Center</a></li>
+                        <li><a href="#">Contact Us</a></li>
+                        <li><a href="#">Community</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h5>Legal</h5>
+                    <ul>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                        <li><a href="#">Subprocessors</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="shell footer-bottom">
+            <p>&copy; 2026 Clarity. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <div class="modal-shell" id="modal-shell" aria-hidden="true"></div>
+    <div class="toast" id="toast" aria-live="polite"></div>
+
+    <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg,.heic,.doc,.docx" hidden>
+
+
+
+    <script type="module" src="main.js"></script>
+</body>
+
+</html>

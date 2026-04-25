@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.DS_Store
+*.log
+.env
+.idea/
+.vscode/
+.gemini/
+stitch_sky_blue_legal_clarity/
+frontend/assets/mountains.png
+frontend/assets/media__1777152009883.png
+remo

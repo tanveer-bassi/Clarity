@@ -1,0 +1,8 @@
+<svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer Triangle -->
+  <path d="M50 15L85 75H15L50 15Z" stroke="#5e75ee" stroke-width="6" stroke-linejoin="round"/>
+  <!-- Internal Y Shape -->
+  <path d="M50 45V75" stroke="#5e75ee" stroke-width="6" stroke-linecap="round"/>
+  <path d="M50 45L30 60" stroke="#5e75ee" stroke-width="6" stroke-linecap="round"/>
+  <path d="M50 45L70 60" stroke="#5e75ee" stroke-width="6" stroke-linecap="round"/>
+</svg>
