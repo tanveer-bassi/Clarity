@@ -37,6 +37,7 @@ class ProcessingMetadata(BaseModel):
     ocr_mode: Optional[str] = None
     model_source: Optional[str] = None
     endpoint_mode: Optional[str] = None
+    dcp_mode: Optional[str] = None # e.g. "real" or "simulated"
     extracted_text_preview: Optional[str] = None
 
 

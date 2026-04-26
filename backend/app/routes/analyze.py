@@ -144,6 +144,7 @@ async def analyze_document(
             used_gemma=used_gemma,
             used_backboard=False,  # Updated below
             used_dcp=False,
+            dcp_mode="off",
             processing_time_ms=elapsed_ms,
             ocr_mode=ocr_mode,
             model_source=model_service.get_model_source(),
@@ -202,7 +203,7 @@ async def analyze_dcp(
     _validate_file(file)
 
     # --- OCR ---
-    raw_text, used_vision = await vision_service.extract_text_from_upload(file)
+    raw_text, used_vision, ocr_mode = await vision_service.extract_text_from_upload(file)
     clauses = model_service.split_into_clauses(raw_text)
 
     if not clauses:
@@ -218,7 +219,7 @@ async def analyze_dcp(
         pages = [raw_text]
 
     # --- DCP processing ---
-    dcp_metrics, used_dcp = await dcp_service.process_pages_parallel(pages)
+    dcp_metrics, used_dcp, dcp_mode = await dcp_service.process_pages_parallel(pages)
 
     # --- Classification ---
     flagged_raw = model_service.hybrid_predict(clauses, top_n=5)
@@ -258,6 +259,10 @@ async def analyze_dcp(
             used_gemma=used_gemma,
             used_backboard=False,
             used_dcp=used_dcp,
+            dcp_mode=dcp_mode,
             processing_time_ms=elapsed_ms,
+            ocr_mode=ocr_mode,
+            model_source=model_service.get_model_source(),
+            endpoint_mode="real_analyze_dcp",
         ),
     )

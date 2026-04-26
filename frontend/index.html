@@ -55,6 +55,15 @@
                     <button class="btn btn-secondary btn-large" data-screen="vault">View Vault</button>
                 </div>
 
+                <div class="dcp-toggle-container centered reveal reveal-delay-2">
+                    <label class="dcp-toggle">
+                        <input type="checkbox" id="dcp-toggle-input">
+                        <span class="dcp-slider"></span>
+                        <span class="dcp-label">Use DCP parallel processing</span>
+                    </label>
+                    <p class="dcp-helper">Splits long documents into page chunks and estimates parallel analysis speedup.</p>
+                </div>
+
                 <div class="how-it-works reveal reveal-delay-3">
                     <div class="section-header-centered">
 
@@ -521,6 +530,33 @@
                         <ul class="report-list" id="report-clauses">
                             <li>Critical: liability recovery window is unusually narrow</li>
                         </ul>
+                    </div>
+                    <div class="report-block full" id="report-dcp-container" style="display:none">
+                        <div class="dcp-metrics-card">
+                            <div class="dcp-metrics-header">
+                                <span class="material-symbols-rounded">speed</span>
+                                <h4 id="report-dcp-title">DCP Parallel Speedup</h4>
+                                <span class="badge" id="report-dcp-mode">Simulated</span>
+                            </div>
+                            <div class="dcp-metrics-grid">
+                                <div class="dcp-metric">
+                                    <div class="dcp-metric-val" id="report-dcp-pages">0</div>
+                                    <div class="dcp-metric-label">Pages</div>
+                                </div>
+                                <div class="dcp-metric">
+                                    <div class="dcp-metric-val" id="report-dcp-seq">0.0s</div>
+                                    <div class="dcp-metric-label">Sequential</div>
+                                </div>
+                                <div class="dcp-metric">
+                                    <div class="dcp-metric-val text-accent" id="report-dcp-para">0.0s</div>
+                                    <div class="dcp-metric-label">Parallel</div>
+                                </div>
+                                <div class="dcp-metric">
+                                    <div class="dcp-metric-val text-success" id="report-dcp-speedup">0.0x</div>
+                                    <div class="dcp-metric-label">Speedup</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="report-block full">
                         <h4>Processing Metadata</h4>
