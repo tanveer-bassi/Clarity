@@ -88,4 +88,5 @@ class HealthResponse(BaseModel):
     status: str = "healthy"
     version: str = "1.0.0"
     model_loaded: bool = False
+    model_source: str = "rules_only"
     integrations: dict = {}

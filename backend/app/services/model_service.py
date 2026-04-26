@@ -1,8 +1,12 @@
 """
 model_service.py — Hybrid clause classifier.
 
-Loads the custom DistilBERT model from ml/clearconsent-distilbert-v2 and
-combines it with deterministic rule-based predictions for must-catch
+Loads the custom DistilBERT model with a cascading strategy:
+  1. Local directory  (CLEARCONSENT_MODEL_DIR or ../ml/clearconsent-distilbert-v2)
+  2. Hugging Face Hub (CLEARCONSENT_HF_MODEL_ID or 1Ghoul1/clearconsent-distilbert-v2)
+  3. Rule-based only  (no model needed)
+
+Combines DistilBERT with deterministic rule-based predictions for must-catch
 categories (arbitration, waiver, financial liability, auto-renewal,
 liability limitation).
 """
@@ -13,18 +17,21 @@ import logging
 import os
 import re
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Literal, Tuple
 
 logger = logging.getLogger("clearconsent.model")
 
 # ---------------------------------------------------------------------------
-# Model directory resolution
+# Model source resolution
 # ---------------------------------------------------------------------------
 
 _DEFAULT_MODEL_DIR = str(
     Path(__file__).resolve().parent.parent.parent.parent / "ml" / "clearconsent-distilbert-v2"
 )
 MODEL_DIR = os.getenv("CLEARCONSENT_MODEL_DIR", _DEFAULT_MODEL_DIR)
+
+_DEFAULT_HF_MODEL_ID = "1Ghoul1/clearconsent-distilbert-v2"
+HF_MODEL_ID = os.getenv("CLEARCONSENT_HF_MODEL_ID", _DEFAULT_HF_MODEL_ID)
 
 # ---------------------------------------------------------------------------
 # Lazy-loaded model & tokenizer (populated on first call)
@@ -34,11 +41,19 @@ _tokenizer = None
 _model = None
 _device = None
 _model_available = False
+_model_source: Literal["local", "huggingface", "rules_only"] = "rules_only"
 
 
 def _load_model() -> bool:
-    """Attempt to load the DistilBERT model once. Returns success flag."""
-    global _tokenizer, _model, _device, _model_available
+    """
+    Attempt to load the DistilBERT model once using a cascading strategy:
+      1. Local directory (CLEARCONSENT_MODEL_DIR)
+      2. Hugging Face Hub (CLEARCONSENT_HF_MODEL_ID)
+      3. Falls back to rules_only if both fail.
+
+    Returns True if the model was loaded successfully.
+    """
+    global _tokenizer, _model, _device, _model_available, _model_source
 
     if _model_available:
         return True
@@ -47,25 +62,74 @@ def _load_model() -> bool:
         import torch
         from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-        if not Path(MODEL_DIR).exists():
-            logger.warning("Model directory not found: %s", MODEL_DIR)
-            return False
-
         _device = "cuda" if torch.cuda.is_available() else "cpu"
-        _tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
-        _model = AutoModelForSequenceClassification.from_pretrained(MODEL_DIR)
+
+        # --- Strategy 1: Local directory ---
+        local_path = Path(MODEL_DIR)
+        if local_path.exists() and any(local_path.iterdir()):
+            logger.info("Loading model from local directory: %s", MODEL_DIR)
+            _tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
+            _model = AutoModelForSequenceClassification.from_pretrained(MODEL_DIR)
+            _model.to(_device)
+            _model.eval()
+            _model_available = True
+            _model_source = "local"
+            logger.info(
+                "DistilBERT loaded on %s from local path: %s", _device, MODEL_DIR
+            )
+            return True
+
+        logger.info(
+            "Local model directory not found or empty: %s — trying Hugging Face",
+            MODEL_DIR,
+        )
+
+    except Exception as exc:
+        logger.warning(
+            "Failed to load model from local directory: %s — trying Hugging Face",
+            exc,
+        )
+
+    # --- Strategy 2: Hugging Face Hub ---
+    try:
+        import torch
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+        if _device is None:
+            _device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        logger.info("Loading model from Hugging Face: %s", HF_MODEL_ID)
+        _tokenizer = AutoTokenizer.from_pretrained(HF_MODEL_ID)
+        _model = AutoModelForSequenceClassification.from_pretrained(HF_MODEL_ID)
         _model.to(_device)
         _model.eval()
         _model_available = True
-        logger.info("DistilBERT loaded on %s from %s", _device, MODEL_DIR)
+        _model_source = "huggingface"
+        logger.info(
+            "DistilBERT loaded on %s from Hugging Face: %s", _device, HF_MODEL_ID
+        )
         return True
+
     except Exception as exc:
-        logger.warning("Could not load DistilBERT model: %s", exc)
-        return False
+        logger.warning(
+            "Failed to load model from Hugging Face (%s): %s — falling back to rules only",
+            HF_MODEL_ID,
+            exc,
+        )
+
+    # --- Strategy 3: Rules only ---
+    _model_source = "rules_only"
+    logger.info("Model unavailable — using rule-based classification only")
+    return False
 
 
 def is_model_loaded() -> bool:
     return _model_available
+
+
+def get_model_source() -> str:
+    """Return the source of the loaded model: 'local', 'huggingface', or 'rules_only'."""
+    return _model_source
 
 
 # ---------------------------------------------------------------------------
