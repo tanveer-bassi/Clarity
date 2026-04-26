@@ -1798,6 +1798,33 @@ h4 {
   margin-bottom: 1.5rem;
 }
 
+#screen-report {
+  padding-top: 2.5rem;
+}
+
+#screen-report .report-toolbar {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 2rem;
+  margin-bottom: 2.5rem;
+}
+
+#screen-report .report-toolbar h2 {
+  font-size: clamp(3rem, 6vw, 4.75rem);
+  font-family: var(--font-serif);
+  font-weight: 300;
+  line-height: 1.02;
+  letter-spacing: -0.03em;
+  color: #ffffff;
+  margin-top: 0.6rem;
+}
+
+#screen-report .report-buttons {
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+}
+
 .vault-item {
   align-items: center;
   padding: 1rem 1.2rem;
@@ -1828,8 +1855,35 @@ h4 {
   color: #f08c00;
 }
 
-.report-sheet {
-  padding: 1.5rem;
+#screen-report .report-sheet {
+  padding: 2.5rem;
+  border-radius: 32px;
+}
+
+#screen-report .report-sheet-header {
+  gap: 2rem;
+  align-items: start;
+  margin-bottom: 2.5rem;
+}
+
+#screen-report .report-sheet-header > div:first-child {
+  max-width: 52rem;
+}
+
+#screen-report .report-sheet-header h3 {
+  font-size: clamp(2.4rem, 5vw, 3.6rem);
+  font-family: var(--font-serif);
+  font-weight: 300;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  margin: 0.75rem 0 0.85rem;
+}
+
+#screen-report .report-sheet-header p {
+  font-size: 1.1rem;
+  line-height: 1.75;
+  color: var(--cluely-text-soft);
+  max-width: 58ch;
 }
 
 .mini-score {
@@ -1860,6 +1914,11 @@ h4 {
   margin-top: 2rem;
 }
 
+#screen-report .report-grid {
+  gap: 1.75rem;
+  margin-top: 0;
+}
+
 .report-grid .full {
   grid-column: 1 / -1;
 }
@@ -1884,6 +1943,11 @@ h4 {
   font-size: 1.1rem;
   line-height: 1.6;
   color: var(--cluely-text);
+}
+
+#screen-report .report-block {
+  padding: 2.25rem 2rem;
+  min-height: 11.5rem;
 }
 
 .modal-shell {
