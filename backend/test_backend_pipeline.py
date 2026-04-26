@@ -78,7 +78,7 @@ def test_real(filename, title):
         print(f"Error: {e}")
 
 if __name__ == "__main__":
-    test_health()
-    test_mock()
-    test_real("test_high_risk.pdf", "POST /api/analyze (High Risk)")
-    test_real("test_low_risk.pdf", "POST /api/analyze (Low Risk)")
+    # test_health()
+    # test_mock()
+    test_real("clarity_high_risk_consent_sample.pdf", "POST /api/analyze (High Risk)")
+    test_real("clarity_low_risk_consent_sample.pdf", "POST /api/analyze (Low Risk)")

@@ -225,6 +225,47 @@ RULE_PATTERNS: dict[str, list[str]] = {
     ],
 }
 
+GLOBAL_NEGATION_PATTERNS = [
+    "avoids risky clauses",
+    "does not include",
+    "not included",
+]
+
+NEGATION_PATTERNS = {
+    "AUTO_RENEWAL": [
+        "no automatic renewal",
+        "does not automatically renew",
+        "will not automatically renew",
+        "no automatic renewal, subscription, or recurring charge",
+        "there is no automatic renewal",
+        "without automatic renewal",
+    ],
+    "ARBITRATION": [
+        "no binding arbitration",
+        "not subject to binding arbitration",
+        "does not require arbitration",
+        "avoids binding arbitration",
+        "without binding arbitration",
+    ],
+    "WAIVER_OF_RIGHTS": [
+        "no lawsuit waiver",
+        "no lawsuit waivers",
+        "does not waive the right",
+        "does not waive your right",
+        "no waiver of rights",
+    ],
+    "FINANCIAL_LIABILITY": [
+        "no surprise fees",
+        "no unexpected financial responsibility",
+        "costs will be explained before services are provided",
+        "you may ask for a cost estimate",
+    ],
+    "LIABILITY_LIMITATION": [
+        "no limitation of liability",
+        "does not limit liability",
+        "no broad liability limits",
+    ],
+}
 
 def _rule_classify(clause: str) -> List[Tuple[str, float]]:
     """Return list of (category, confidence) pairs matched by rules."""
@@ -309,8 +350,19 @@ def hybrid_predict(clauses: List[str], top_n: int = 5) -> List[dict]:
     seen: dict[str, dict] = {}  # key = f"{category}::{clause_idx}"
 
     for idx, clause in enumerate(clauses):
+        lower_clause = clause.lower()
+        global_negation_hit = next((p for p in GLOBAL_NEGATION_PATTERNS if p in lower_clause), None)
+
         # -- Rule-based --
         for category, conf in _rule_classify(clause):
+            if global_negation_hit:
+                logger.info(f"Skipped {category} because clause contained global negation pattern: {global_negation_hit}")
+                continue
+            cat_negation_hit = next((p for p in NEGATION_PATTERNS.get(category, []) if p in lower_clause), None)
+            if cat_negation_hit:
+                logger.info(f"Skipped {category} because clause contained negation pattern: {cat_negation_hit}")
+                continue
+
             key = f"{category}::{idx}"
             if key not in seen or seen[key]["confidence"] < conf:
                 seen[key] = {
@@ -323,6 +375,14 @@ def hybrid_predict(clauses: List[str], top_n: int = 5) -> List[dict]:
 
         # -- DistilBERT --
         for category, conf in _distilbert_classify(clause):
+            if global_negation_hit:
+                logger.info(f"Skipped DistilBERT {category} because clause contained global negation pattern: {global_negation_hit}")
+                continue
+            cat_negation_hit = next((p for p in NEGATION_PATTERNS.get(category, []) if p in lower_clause), None)
+            if cat_negation_hit:
+                logger.info(f"Skipped DistilBERT {category} because clause contained negation pattern: {cat_negation_hit}")
+                continue
+
             key = f"{category}::{idx}"
             if key in seen:
                 # Merge: keep higher confidence, mark as merged

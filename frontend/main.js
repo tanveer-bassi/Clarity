@@ -5,6 +5,7 @@ const state = {
   clauseIndex: 0,
   zoom: 100,
   scoreAnimated: false,
+  isProcessing: false,
 };
 
 let clauses = [];
@@ -147,6 +148,21 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function getRiskColor(score) {
+    const normalized = Math.max(0, Math.min(100, score)) / 100;
+    const hue = 8 + (120 - 8) * (1 - normalized);
+    const saturation = 88;
+    const lightness = 28 + normalized * 24;
+    return `hsl(${hue} ${saturation}% ${lightness}%)`;
+  }
+
+  function getRiskTextLabel() {
+    if (state.riskLabel === "CRITICAL") return "CRITICAL";
+    if (state.riskLabel === "HIGH") return "HIGH RISK";
+    if (state.riskLabel === "MEDIUM") return "WATCHLIST";
+    return "LOW RISK";
+  }
+
   function animateScore(target) {
     const circumference = 2 * Math.PI * 92; // 578.05
     scoreRing.style.strokeDasharray = `${circumference} ${circumference}`;
@@ -158,21 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const scoreLabel = document.querySelector(".score-label");
     const clampedTarget = Math.max(0, Math.min(100, target));
 
-    function getRiskColor(score) {
-      const normalized = Math.max(0, Math.min(100, score)) / 100;
-      const hue = 8 + (120 - 8) * (1 - normalized);
-      const saturation = 88;
-      const lightness = 28 + normalized * 24;
-      return `hsl(${hue} ${saturation}% ${lightness}%)`;
-    }
-
-    function getRiskText(score) {
-      if (score >= 80) return "High Risk";
-      if (score >= 50) return "Watchlist";
-      return "Optimal";
-    }
-
-    if (scoreLabel) scoreLabel.textContent = getRiskText(clampedTarget);
+    if (scoreLabel) scoreLabel.textContent = getRiskTextLabel();
 
     function frame(now) {
       const progress = Math.min((now - start) / duration, 1);
@@ -204,7 +206,7 @@ document.addEventListener("DOMContentLoaded", () => {
     scoreNumber.textContent = String(clampedTarget);
 
     if (scoreLabel) {
-      scoreLabel.textContent = clampedTarget >= 80 ? "High Risk" : clampedTarget >= 50 ? "Watchlist" : "Optimal";
+      scoreLabel.textContent = getRiskTextLabel();
     }
   }
 
@@ -266,17 +268,55 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  async function callAnalyzeReal(file) {
+    const endpoint = `${API_BASE}/api/analyze`;
+    console.log(`[Clarity] Calling real endpoint: ${endpoint}`);
+    console.log(`[Clarity] Uploading file: ${file.name}`);
+    
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log("[Clarity] Real response JSON:", data);
+      return data;
+    } catch (error) {
+      console.error("[Clarity] Real API call failed:", error);
+      throw error;
+    }
+  }
+
   function mapApiResponse(data) {
     state.score = data.risk_score_numeric;
+    state.riskLabel = data.overall_risk_score;
+    
+    console.log("[Clarity DEBUG] raw response JSON:", data);
+    console.log("[Clarity DEBUG] parsed risk_score_numeric:", state.score);
+    console.log("[Clarity DEBUG] rendered score value (target):", state.score);
+    console.log("[Clarity DEBUG] overall_risk_score:", state.riskLabel);
+    console.log("[Clarity DEBUG] flagged_clauses.length:", data.flagged_clauses ? data.flagged_clauses.length : 0);
     
     // Update headline based on overall score
     const headline = document.getElementById("discovery-headline");
     const summary = document.getElementById("discovery-summary");
     
     if (headline) {
-      headline.textContent = data.overall_risk_score === "CRITICAL" || data.overall_risk_score === "HIGH" 
-          ? "High-Risk Exposure Detected" 
-          : data.overall_risk_score === "MEDIUM" ? "Moderate Risk Detected" : "Low Risk Document";
+      if (data.overall_risk_score === "CRITICAL") {
+          headline.textContent = "Critical Risk Detected";
+      } else if (data.overall_risk_score === "HIGH") {
+          headline.textContent = "High-Risk Exposure Detected";
+      } else if (data.overall_risk_score === "MEDIUM") {
+          headline.textContent = "Moderate Risk Detected";
+      } else {
+          headline.textContent = "Low Risk / No Major Issues Detected";
+      }
     }
         
     if (summary) {
@@ -302,38 +342,57 @@ document.addEventListener("DOMContentLoaded", () => {
     if (standardClausesCount) standardClausesCount.textContent = `${flaggedCount} Total Flags`;
 
     const findingsGrid = document.getElementById("findings-grid");
-    if (findingsGrid && data.flagged_clauses) {
+    if (findingsGrid) {
         findingsGrid.innerHTML = "";
         
-        data.flagged_clauses.slice(0, 4).forEach((clause, i) => {
+        if (data.flagged_clauses && data.flagged_clauses.length > 0) {
+            data.flagged_clauses.slice(0, 4).forEach((clause, i) => {
+                const article = document.createElement("article");
+                article.className = `finding-card reveal reveal-delay-${i + 1}`;
+                
+                let riskClass = "caution";
+                if (clause.severity === "CRITICAL") riskClass = "critical";
+                else if (clause.severity === "HIGH") riskClass = "warning";
+                
+                if (i === 0 && clause.severity === "CRITICAL") article.classList.add("finding-card-featured", "risk-critical");
+                else article.classList.add(`risk-${riskClass}`);
+                
+                const typeFormat = clause.type.replace(/_/g, " ");
+                const typeCap = typeFormat.charAt(0) + typeFormat.slice(1).toLowerCase();
+                
+                article.innerHTML = `
+                    <div class="finding-head">
+                        <span class="risk-badge ${riskClass}">${clause.severity.charAt(0) + clause.severity.slice(1).toLowerCase()}</span>
+                        <span class="finding-icon" aria-hidden="true">${Math.round(clause.confidence * 100)}%</span>
+                    </div>
+                    <div class="finding-copy">
+                        <h3>${typeCap}</h3>
+                        <p class="finding-summary"><strong>Plain English:</strong> ${clause.translation || clause.original_text}</p>
+                    </div>
+                    <div class="legal-box">“${clause.original_text}”</div>
+                    <button class="text-link" data-screen="clause">View full clause</button>
+                `;
+                
+                findingsGrid.appendChild(article);
+            });
+        } else {
+            // Render a safe state card when no flags are found
             const article = document.createElement("article");
-            article.className = `finding-card reveal reveal-delay-${i + 1}`;
-            
-            let riskClass = "caution";
-            if (clause.severity === "CRITICAL") riskClass = "critical";
-            else if (clause.severity === "HIGH") riskClass = "warning";
-            
-            if (i === 0 && clause.severity === "CRITICAL") article.classList.add("finding-card-featured", "risk-critical");
-            else article.classList.add(`risk-${riskClass}`);
-            
-            const typeFormat = clause.type.replace(/_/g, " ");
-            const typeCap = typeFormat.charAt(0) + typeFormat.slice(1).toLowerCase();
-            
+            article.className = `finding-card reveal reveal-delay-1 risk-safe`;
             article.innerHTML = `
                 <div class="finding-head">
-                    <span class="risk-badge ${riskClass}">${clause.severity.charAt(0) + clause.severity.slice(1).toLowerCase()}</span>
-                    <span class="finding-icon" aria-hidden="true">${Math.round(clause.confidence * 100)}%</span>
+                    <span class="risk-badge safe">Low</span>
+                    <span class="finding-icon" aria-hidden="true"><span class="material-symbols-rounded">check_circle</span></span>
                 </div>
                 <div class="finding-copy">
-                    <h3>${typeCap}</h3>
-                    <p class="finding-summary"><strong>Plain English:</strong> ${clause.translation || clause.original_text}</p>
+                    <h3>No risky clauses detected</h3>
+                    <p class="finding-summary"><strong>Plain English:</strong> This document appears low risk based on the analyzed text.</p>
                 </div>
-                <div class="legal-box">“${clause.original_text}”</div>
-                <button class="text-link" data-screen="clause">View full clause</button>
+                <div class="legal-box">“No flagged clauses were detected by the system.”</div>
+                <button class="text-link" data-screen="clause">View analysis</button>
             `;
-            
             findingsGrid.appendChild(article);
-        });
+        }
         
         revealOnScroll();
     }
@@ -364,6 +423,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   async function simulateProcessing() {
+    state.scoreAnimated = false;
     processingTitle.textContent = "Analyzing your document";
     processingStatus.textContent = "Connecting to backend and scoring risk...";
     setScreen("processing");
@@ -388,12 +448,48 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  async function analyzeFile(file) {
+    state.scoreAnimated = false;
+    processingTitle.textContent = "Analyzing your document";
+    processingStatus.textContent = "Connecting to backend and scoring risk...";
+    setScreen("processing");
+
+    try {
+        const data = await callAnalyzeReal(file);
+        
+        processingStatus.textContent = "Drafting plain-English summary...";
+        // artificial delay to let user read the status message
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        mapApiResponse(data);
+        
+        processingStatus.textContent = "Decision brief ready. Opening your results.";
+        await new Promise(resolve => setTimeout(resolve, 400));
+        
+        setScreen("dashboard");
+    } catch (error) {
+        console.error(error);
+        processingStatus.textContent = "Analysis failed. Please try again or check backend.";
+        showToast("Error connecting to backend");
+        // We do NOT navigate back home instantly.
+        // User can click "New Scan" or we can leave a button.
+        // For now, the user stays on the processing screen with the error message.
+    } finally {
+        state.isProcessing = false;
+    }
+  }
+
   function handleFile(file) {
     if (!file) return;
+    if (state.isProcessing) return; // disable repeated submissions while loading
+    state.isProcessing = true;
+    
     state.uploadedFileName = file.name;
     processingFileName.textContent = file.name;
     showToast(`Added ${file.name}. Starting analysis...`);
-    simulateProcessing();
+    
+    // Call the real endpoint instead of simulateProcessing
+    analyzeFile(file);
   }
 
   function openModal(key) {
