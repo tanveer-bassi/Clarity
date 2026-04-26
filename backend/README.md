@@ -60,14 +60,29 @@ Every integration has a **real mode** (when the API key is set) and a **safe moc
 | Integration          | Env Var                          | Fallback Behaviour                          |
 | -------------------- | -------------------------------- | ------------------------------------------- |
 | Google Cloud Vision  | `GOOGLE_APPLICATION_CREDENTIALS` | Returns realistic mock OCR text             |
-| Custom DistilBERT    | `CLEARCONSENT_MODEL_DIR`         | Rule-based classifier only                  |
+| Custom DistilBERT    | `CLEARCONSENT_MODEL_DIR` / `CLEARCONSENT_HF_MODEL_ID` | Rule-based classifier only  |
 | Google Gemma / Gemini| `GEMINI_API_KEY`                 | Deterministic plain-English translations    |
 | Backboard            | `BACKBOARD_API_KEY`              | In-memory consent vault                     |
 | DCP / Distributive   | `DCP_API_KEY`                    | Simulated parallel timing metrics           |
 
 ## Custom ML Model
 
-The backend loads a fine-tuned **DistilBERT** model from `../ml/clearconsent-distilbert-v2`. This is a multi-label classifier trained on legal clause data that predicts 9 risk categories:
+The backend loads a fine-tuned **DistilBERT** model using a cascading strategy:
+
+1. **Local directory** — `CLEARCONSENT_MODEL_DIR` (default: `../ml/clearconsent-distilbert-v2`)
+2. **Hugging Face Hub** — `CLEARCONSENT_HF_MODEL_ID` (default: `1Ghoul1/clearconsent-distilbert-v2`)
+3. **Rules only** — If both sources fail, falls back to deterministic rule-based classification
+
+The `/health` endpoint reports which source was used:
+
+```json
+{
+  "model_loaded": true,
+  "model_source": "local"      // or "huggingface" or "rules_only"
+}
+```
+
+This is a multi-label classifier trained on legal clause data that predicts 9 risk categories:
 
 - WAIVER_OF_RIGHTS
 - ARBITRATION
