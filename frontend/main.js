@@ -1,12 +1,18 @@
+// VITE_API_BASE in frontend/.env overrides this — set it to your ngrok URL for deployment.
+const API_BASE = import.meta.env?.VITE_API_BASE ?? "http://localhost:8000";
+
 const state = {
   currentScreen: "landing",
   uploadedFileName: "Hospital_Consent_Form.pdf",
   score: 75,
   clauseIndex: 0,
   zoom: 100,
+  threadId: null,
+  summary: "",
+  dcpMetrics: null,
 };
 
-const clauses = [
+let clauses = [
   {
     badge: "High risk flag",
     title: "Liability limitation and indemnity",
@@ -87,7 +93,7 @@ const modalContent = {
     body: `
       <div class="report-block">
         <h4>Recommended rewrite</h4>
-        <p style="font-family:'IBM Plex Mono', monospace">“Each party’s aggregate liability will not exceed fees paid in the twelve (12) months before the claim, excluding fraud, willful misconduct, and confidentiality breaches.”</p>
+        <p style="font-family:'IBM Plex Mono', monospace">"Each party's aggregate liability will not exceed fees paid in the twelve (12) months before the claim, excluding fraud, willful misconduct, and confidentiality breaches."</p>
       </div>
       <p style="margin-top:1rem">This keeps the protective intent but removes the most visibly unfair asymmetry.</p>
     `,
@@ -110,9 +116,145 @@ const modalContent = {
   },
 };
 
-document.addEventListener("DOMContentLoaded", () => {
+// ---------------------------------------------------------------------------
+// Session — Backboard Thread ID as user identity
+// ---------------------------------------------------------------------------
+
+async function initSession() {
+  const stored = localStorage.getItem("clarity_thread_id");
+  if (stored) {
+    state.threadId = stored;
+    return;
+  }
+  try {
+    const res = await fetch(`${API_BASE}/api/session/init`, { method: "POST" });
+    const data = await res.json();
+    state.threadId = data.thread_id;
+    localStorage.setItem("clarity_thread_id", data.thread_id);
+  } catch {
+    state.threadId = crypto.randomUUID();
+    localStorage.setItem("clarity_thread_id", state.threadId);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// API response → UI state
+// ---------------------------------------------------------------------------
+
+function mapApiResponse(data) {
+  state.score = data.risk_score_numeric ?? 75;
+  state.summary = data.summary_plain_english ?? "";
+  if (data.dcp_metrics) state.dcpMetrics = data.dcp_metrics;
+
+  const severityBadge = { CRITICAL: "Critical flag", HIGH: "High risk flag", MEDIUM: "Warning flag", LOW: "Info flag" };
+  const typeLabel = (t) =>
+    (t ?? "Unknown clause").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+  const mapped = (data.flagged_clauses ?? []).map((c) => ({
+    badge: severityBadge[c.severity] ?? "Flag",
+    title: typeLabel(c.type),
+    subtitle: `${c.source === "distilbert" ? "AI detected" : "Rule detected"} · ${state.uploadedFileName}`,
+    original: `“${c.original_text}”`,
+    plain: c.translation || c.original_text,
+    impacts: [
+      [
+        "Risk level",
+        `Severity: ${c.severity}. Confidence: ${Math.round((c.confidence ?? 0) * 100)}%.`,
+      ],
+      [
+        "Detected by",
+        c.source === "distilbert"
+          ? "Custom DistilBERT model trained on legal contracts."
+          : "Deterministic rule-based classifier.",
+      ],
+    ],
+  }));
+
+  clauses =
+    mapped.length > 0
+      ? mapped
+      : [
+          {
+            badge: "All clear",
+            title: "No high-risk clauses found",
+            subtitle: state.uploadedFileName,
+            original: "“No flagged clauses were detected in this document.”",
+            plain: "This document appears to carry low overall risk.",
+            impacts: [
+              ["Result", "No significant risk clauses were identified."],
+              ["Recommendation", "Review manually for any domain-specific concerns."],
+            ],
+          },
+        ];
+
+  state.clauseIndex = 0;
+}
+
+// ---------------------------------------------------------------------------
+// Report generator (Phase 5)
+// ---------------------------------------------------------------------------
+
+function downloadReport() {
+  if (!state.summary && clauses.length === 0) {
+    return;
+  }
+
+  const lines = [
+    "CLARITY ANALYSIS REPORT",
+    "========================",
+    `Generated : ${new Date().toLocaleString()}`,
+    `Document  : ${state.uploadedFileName}`,
+    `Risk score: ${state.score} / 100`,
+    "",
+    "SUMMARY",
+    "-------",
+    state.summary || "No summary available.",
+    "",
+    `FLAGGED CLAUSES (${clauses.length})`,
+    "----------------",
+    ...clauses.flatMap((c, i) => [
+      "",
+      `[${i + 1}] ${c.title}`,
+      `    Severity : ${c.badge}`,
+      `    Original : ${c.original}`,
+      `    Plain    : ${c.plain}`,
+      `    Impact 1 : ${c.impacts[0][0]} — ${c.impacts[0][1]}`,
+      `    Impact 2 : ${c.impacts[1][0]} — ${c.impacts[1][1]}`,
+    ]),
+  ];
+
+  if (state.dcpMetrics) {
+    const m = state.dcpMetrics;
+    lines.push(
+      "",
+      "DCP PARALLEL PROCESSING",
+      "-----------------------",
+      `Pages processed   : ${m.pages_processed}`,
+      `Sequential time   : ${(m.sequential_time_ms / 1000).toFixed(1)}s`,
+      `DCP parallel time : ${(m.dcp_parallel_time_ms / 1000).toFixed(1)}s`,
+      `Speedup factor    : ${m.speedup_factor}×`,
+    );
+  }
+
+  const blob = new Blob([lines.join("\n")], { type: "text/plain" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `clarity-report-${state.uploadedFileName.replace(/\.[^.]+$/, "")}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ---------------------------------------------------------------------------
+// DOM
+// ---------------------------------------------------------------------------
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await initSession();
+
   const screens = [...document.querySelectorAll(".screen")];
-  const navButtons = [...document.querySelectorAll("[data-screen]")];
   const modalShell = document.getElementById("modal-shell");
   const toast = document.getElementById("toast");
   const fileInput = document.getElementById("file-input");
@@ -147,52 +289,36 @@ document.addEventListener("DOMContentLoaded", () => {
   function revealOnScroll() {
     const observer = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("is-visible");
-        }
+        if (entry.isIntersecting) entry.target.classList.add("is-visible");
       });
     }, { threshold: 0.1 });
-
-    document.querySelectorAll(".reveal").forEach((node) => {
-      observer.observe(node);
-    });
+    document.querySelectorAll(".reveal").forEach((node) => observer.observe(node));
   }
 
   function revealScreen(screen) {
-    screen.querySelectorAll(".reveal").forEach((node) => {
-      node.classList.remove("is-visible");
-    });
-    // Let IntersectionObserver handle the initial reveal if they are in view
+    screen.querySelectorAll(".reveal").forEach((node) => node.classList.remove("is-visible"));
     requestAnimationFrame(revealOnScroll);
   }
 
   function updateNavState() {
     document.querySelectorAll(".nav-item, .mobile-nav-item").forEach((button) => {
-      const active = button.dataset.screen === state.currentScreen;
-      button.classList.toggle("is-active", active);
+      button.classList.toggle("is-active", button.dataset.screen === state.currentScreen);
     });
   }
 
   function animateScore(target) {
-    const circumference = 2 * Math.PI * 92; // 578.05
+    const circumference = 2 * Math.PI * 92;
     scoreRing.style.strokeDasharray = `${circumference} ${circumference}`;
     scoreRing.style.strokeDashoffset = String(circumference);
 
     const start = performance.now();
     const duration = 1500;
-
     const scoreLabel = document.querySelector(".score-label");
 
-    // Define colors and labels based on risk level
-    let riskColor = "#4f46e5"; // Low
+    let riskColor = "#4f46e5";
     let riskText = "Optimal";
-    if (target >= 80) {
-      riskColor = "#dc2626"; // High
-      riskText = "High Risk";
-    } else if (target >= 50) {
-      riskColor = "#f59e0b"; // Medium
-      riskText = "Watchlist";
-    }
+    if (target >= 80) { riskColor = "#dc2626"; riskText = "High Risk"; }
+    else if (target >= 50) { riskColor = "#f59e0b"; riskText = "Watchlist"; }
 
     scoreRing.style.stroke = riskColor;
     if (scoreLabel) scoreLabel.textContent = riskText;
@@ -201,15 +327,10 @@ document.addEventListener("DOMContentLoaded", () => {
       const progress = Math.min((now - start) / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
       const currentScore = Math.round(target * eased);
-
       scoreNumber.textContent = String(currentScore);
-
-      const offset = circumference - (currentScore / 100) * circumference;
-      scoreRing.style.strokeDashoffset = String(offset);
-
+      scoreRing.style.strokeDashoffset = String(circumference - (currentScore / 100) * circumference);
       if (progress < 1) requestAnimationFrame(frame);
     }
-
     requestAnimationFrame(frame);
   }
 
@@ -234,27 +355,147 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     updateNavState();
     window.scrollTo({ top: 0, behavior: "smooth" });
-
     if (name === "dashboard") animateScore(state.score);
   }
 
-  function simulateProcessing() {
-    processingTitle.textContent = "Building your decision brief";
-    processingStatus.textContent = "Scoring liability, arbitration, and waiver language.";
+  // ---------------------------------------------------------------------------
+  // DCP panel (Phase 5)
+  // ---------------------------------------------------------------------------
+
+  function openDcpPanel() {
+    const m = state.dcpMetrics;
+    const body = m
+      ? `
+        <div class="report-grid">
+          <div class="report-block">
+            <h4>Pages processed</h4>
+            <p style="font-size:2rem;font-weight:700;margin-top:.25rem">${m.pages_processed}</p>
+          </div>
+          <div class="report-block">
+            <h4>Speedup factor</h4>
+            <p style="font-size:2rem;font-weight:700;margin-top:.25rem">${m.speedup_factor}×</p>
+          </div>
+          <div class="report-block">
+            <h4>Sequential (est.)</h4>
+            <p>${(m.sequential_time_ms / 1000).toFixed(1)}s</p>
+          </div>
+          <div class="report-block">
+            <h4>DCP parallel</h4>
+            <p>${(m.dcp_parallel_time_ms / 1000).toFixed(1)}s</p>
+          </div>
+          <div class="report-block full">
+            <h4>What DCP did</h4>
+            <p>Distributed ${m.pages_processed} page${m.pages_processed !== 1 ? "s" : ""} across the DCP worker network in parallel, achieving a <strong>${m.speedup_factor}×</strong> speedup over sequential processing.</p>
+          </div>
+        </div>`
+      : `<p>No DCP metrics yet. Use the camera button on the landing screen to trigger a DCP demo analysis.</p>`;
+
+    modalShell.innerHTML = `
+      <div class="modal-card">
+        <div class="modal-head">
+          <div>
+            <div class="eyebrow">Clarity panel</div>
+            <h3>DCP parallel processing</h3>
+          </div>
+          <button class="icon-button" id="modal-close"><span class="material-symbols-rounded">close</span></button>
+        </div>
+        <div>${body}</div>
+      </div>
+    `;
+    modalShell.classList.add("is-open");
+    modalShell.setAttribute("aria-hidden", "false");
+    document.getElementById("modal-close")?.addEventListener("click", closeModal);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Real document analysis
+  // ---------------------------------------------------------------------------
+
+  async function analyzeFile(file) {
+    processingTitle.textContent = "Analyzing your document";
+    processingStatus.textContent = "Extracting text and scanning for risk clauses...";
     setScreen("processing");
 
-    window.setTimeout(() => {
-      processingStatus.textContent = "High-risk clauses detected. Drafting plain-English summary.";
-    }, 1400);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("user_id", state.threadId || "demo_user");
 
-    window.setTimeout(() => {
+      const headers = {};
+      if (state.threadId) headers["X-User-Thread"] = state.threadId;
+
+      const res = await fetch(`${API_BASE}/api/analyze`, {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+
+      processingStatus.textContent = "Classification complete. Building your brief...";
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || `Analysis failed (${res.status})`);
+      }
+
+      const data = await res.json();
+      mapApiResponse(data);
       processingStatus.textContent = "Decision brief ready. Opening your results.";
       animateScore(state.score);
-    }, 2800);
+      updateClauseContent();
+      window.setTimeout(() => setScreen("dashboard"), 800);
+    } catch (err) {
+      // Fallback to mock endpoint so the demo always works
+      try {
+        processingStatus.textContent = "Switching to demo mode...";
+        const mockRes = await fetch(`${API_BASE}/api/analyze/mock`, { method: "POST" });
+        if (mockRes.ok) {
+          const mockData = await mockRes.json();
+          mapApiResponse(mockData);
+          animateScore(state.score);
+          updateClauseContent();
+          window.setTimeout(() => setScreen("dashboard"), 800);
+          return;
+        }
+      } catch { /* fall through */ }
+      showToast(`Analysis error: ${err.message}`);
+      setScreen("landing");
+    }
+  }
 
-    window.setTimeout(() => {
-      setScreen("dashboard");
-    }, 3600);
+  // DCP mode — called by camera capture button for demo purposes (Phase 5)
+  async function analyzeWithDcp(file) {
+    processingTitle.textContent = "DCP parallel analysis";
+    processingStatus.textContent = "Distributing pages across DCP worker network...";
+    setScreen("processing");
+
+    try {
+      const formData = new FormData();
+      if (file && file.size > 0) formData.append("file", file);
+      formData.append("user_id", state.threadId || "demo_user");
+
+      const headers = {};
+      if (state.threadId) headers["X-User-Thread"] = state.threadId;
+
+      const res = await fetch(`${API_BASE}/api/analyze/dcp`, {
+        method: "POST",
+        headers,
+        body: formData,
+      });
+
+      processingStatus.textContent = "DCP processing complete. Building your brief...";
+
+      if (!res.ok) throw new Error(`DCP analysis failed (${res.status})`);
+
+      const data = await res.json();
+      mapApiResponse(data);
+      processingStatus.textContent = "Decision brief ready. Opening your results.";
+      animateScore(state.score);
+      updateClauseContent();
+      window.setTimeout(() => setScreen("dashboard"), 800);
+    } catch (err) {
+      showToast(`DCP error: ${err.message}`);
+      setScreen("landing");
+    }
   }
 
   function handleFile(file) {
@@ -262,10 +503,14 @@ document.addEventListener("DOMContentLoaded", () => {
     state.uploadedFileName = file.name;
     processingFileName.textContent = file.name;
     showToast(`Added ${file.name}. Starting analysis...`);
-    simulateProcessing();
+    analyzeFile(file);
   }
 
   function openModal(key) {
+    if (key === "dcp") {
+      openDcpPanel();
+      return;
+    }
     const config = modalContent[key];
     if (!config) return;
     modalShell.innerHTML = `
@@ -282,7 +527,6 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
     modalShell.classList.add("is-open");
     modalShell.setAttribute("aria-hidden", "false");
-
     document.getElementById("modal-close")?.addEventListener("click", closeModal);
   }
 
@@ -292,11 +536,9 @@ document.addEventListener("DOMContentLoaded", () => {
     modalShell.innerHTML = "";
   }
 
-  // Event Delegation for Navigation and UI Triggers
   document.addEventListener("click", (event) => {
     const target = event.target.closest("[data-screen], [data-modal], [data-toast]");
     if (!target) return;
-
     if (target.dataset.screen) setScreen(target.dataset.screen);
     if (target.dataset.modal) openModal(target.dataset.modal);
     if (target.dataset.toast) showToast(target.dataset.toast);
@@ -307,27 +549,18 @@ document.addEventListener("DOMContentLoaded", () => {
   const headerInsightsUpload = document.getElementById("header-insights-upload");
   const vaultScanTrigger = document.getElementById("vault-scan-trigger");
 
-  if (headerScanTrigger) {
-    headerScanTrigger.addEventListener("click", () => fileInput.click());
-  }
-
-  if (insightsScanTrigger) {
-    insightsScanTrigger.addEventListener("click", () => fileInput.click());
-  }
-
-  if (headerInsightsUpload) {
-    headerInsightsUpload.addEventListener("click", () => fileInput.click());
-  }
-
-  if (vaultScanTrigger) {
-    vaultScanTrigger.addEventListener("click", () => fileInput.click());
-  }
+  if (headerScanTrigger) headerScanTrigger.addEventListener("click", () => fileInput.click());
+  if (insightsScanTrigger) insightsScanTrigger.addEventListener("click", () => fileInput.click());
+  if (headerInsightsUpload) headerInsightsUpload.addEventListener("click", () => fileInput.click());
+  if (vaultScanTrigger) vaultScanTrigger.addEventListener("click", () => fileInput.click());
 
   landingUpload.addEventListener("click", () => fileInput.click());
   cameraUpload.addEventListener("click", () => fileInput.click());
+
+  // Camera capture triggers DCP demo mode — showcases parallel processing
   cameraCapture.addEventListener("click", () => {
-    showToast("Photo captured. Starting analysis...");
-    simulateProcessing();
+    showToast("Triggering DCP parallel analysis...");
+    analyzeWithDcp(null);
   });
 
   fileInput.addEventListener("change", (event) => handleFile(event.target.files?.[0]));
@@ -346,7 +579,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  downloadPdf.addEventListener("click", () => showToast("PDF export hook ready for backend integration."));
+  // Download report — generates a plain-text file from the current analysis (Phase 5)
+  downloadPdf.addEventListener("click", () => {
+    if (!state.summary && clauses.length <= 2 && clauses[0]?.badge === "High risk flag") {
+      showToast("Upload a document first to generate a real report.");
+      return;
+    }
+    downloadReport();
+    showToast("Report downloaded.");
+  });
+
   nextClause.addEventListener("click", () => {
     state.clauseIndex = (state.clauseIndex + 1) % clauses.length;
     updateClauseContent();

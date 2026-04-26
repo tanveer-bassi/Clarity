@@ -16,7 +16,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.models.schemas import HealthResponse
-from app.routes import analyze, history
+from app.routes import analyze, history, session
 
 # ---------------------------------------------------------------------------
 # Bootstrap
@@ -48,19 +48,24 @@ app = FastAPI(
 # CORS — allow the local frontend to call the API
 # ---------------------------------------------------------------------------
 
+# CORS_ORIGINS env var: comma-separated list of extra allowed origins (e.g. ngrok URL).
+# Falls back to wildcard when not set — safe for local hackathon use.
+_extra_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip()]
+_allow_origins = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:5500",
+    "http://localhost:8080",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5500",
+    "http://127.0.0.1:8080",
+    *_extra_origins,
+] or ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://localhost:5500",
-        "http://localhost:8080",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:5500",
-        "http://127.0.0.1:8080",
-        "*",  # Allow all during hackathon — tighten for production
-    ],
+    allow_origins=_allow_origins if _extra_origins else ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -90,6 +95,7 @@ async def log_requests(request: Request, call_next):
 # Routes
 # ---------------------------------------------------------------------------
 
+app.include_router(session.router, prefix="/api")
 app.include_router(analyze.router, prefix="/api")
 app.include_router(history.router, prefix="/api")
 

@@ -14,8 +14,11 @@ torch>=2.0.0
 transformers>=4.40.0
 safetensors>=0.5.0
 
-# --- Google Cloud Vision (optional — install when using real OCR) ---
-# google-cloud-vision>=3.7.0
+# --- Backboard SDK (consent vault, memory, session threads) ---
+backboard-sdk>=0.1.0
 
-# --- Google GenAI / Gemma (optional — install when using real LLM) ---
-# google-genai>=1.0.0
+# --- Google Cloud Vision (OCR) — set GOOGLE_APPLICATION_CREDENTIALS to activate ---
+google-cloud-vision>=3.7.0
+
+# --- Google GenAI / Gemma — set GEMINI_API_KEY to activate ---
+google-genai>=1.0.0

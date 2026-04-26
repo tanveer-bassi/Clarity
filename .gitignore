@@ -1,25 +1,26 @@
-# env files
-.env
-backend/.env
-frontend/.env
-frontend/.env.local
-*.env
+# ---------------------------------------------------------------------------
+# Clarity project — .gitignore
+# ---------------------------------------------------------------------------
 
-# virtual environments
-.venv/
-venv/
-backend/.venv/
-backend/venv/
-ml/.venv/
+# ECC plugin (not part of the project)
+everything-claude-code/
+
+# Environment variables
+.env
+*.env
+.env.local
 
 # Python
 __pycache__/
 *.pyc
+*.pyo
 .pytest_cache/
 
-# ML local env + trained model artifacts
-ml/.venv/
-ml/venv/
+# Virtual environments
+.venv/
+venv/
+
+# ML model artifacts (large binary files)
 ml/clearconsent-distilbert/
 ml/clearconsent-distilbert-v2/
 ml/**/checkpoint-*/
@@ -27,25 +28,18 @@ ml/**/*.safetensors
 ml/**/*.pt
 ml/**/*.bin
 
-# Backend env/venv
-backend/.venv/
-backend/venv/
-backend/**/*.env
+# SQLite database
+*.db
 
-# OS/editor
-.DS_Store
-.vscode/
-
-# frontend
+# Frontend
 node_modules/
 dist/
-.DS_Store
+
+# Logs
 *.log
-.env
+
+# OS / editor
+.DS_Store
 .idea/
 .vscode/
 .gemini/
-stitch_sky_blue_legal_clarity/
-frontend/assets/mountains.png
-frontend/assets/media__1777152009883.png
-remo
