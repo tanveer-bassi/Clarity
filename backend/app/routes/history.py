@@ -33,6 +33,10 @@ async def get_history(user_id: str):
             risk_score_numeric=item.get("risk_score_numeric", 50),
             flagged_count=item.get("flagged_count", 0),
             scanned_at=item.get("scanned_at", ""),
+            # Full fields for detail view
+            summary_plain_english=item.get("summary_plain_english"),
+            flagged_clauses=item.get("flagged_clauses"),
+            processing_metadata=item.get("processing_metadata"),
         )
         for item in items
     ]

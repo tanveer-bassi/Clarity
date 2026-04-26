@@ -173,71 +173,64 @@
         </section>
 
         <section class="screen" id="screen-processing" data-screen="processing">
-            <div class="processing-grid">
-                <div class="doc-preview glass-card reveal">
-                    <div class="doc-preview-header">
-                        <div class="eyebrow">Document in analysis</div>
-                        <h2 id="processing-file-name">Hospital_Consent_Form.pdf</h2>
-                    </div>
-                    <div class="doc-sheet">
-                        <div class="doc-scan-line"></div>
-                        <div class="doc-badge">ANALYSIS ACTIVE</div>
-                    </div>
-                    <p class="support-copy">Backend hook: replace this mock with the uploaded file name, page count,
-                        and Vision preview when your teammate connects the API.</p>
+            <div class="processing-container reveal">
+                <div class="processing-header">
+                    <div class="eyebrow">Document Analysis in Progress</div>
+                    <h2 id="processing-file-name" class="processing-file-display">Hospital_Consent_Form.pdf</h2>
+                    <h1 id="processing-title" class="processing-main-title">Building your decision brief</h1>
                 </div>
 
-                <div class="processing-panel glass-card reveal reveal-delay-2">
-                    <div class="panel-topline">
-                        <div>
-                            <div class="eyebrow">Decision brief pipeline</div>
-                            <h2 id="processing-title">Building your decision brief</h2>
+                <div class="process-steps-grid" id="process-steps">
+                    <div class="process-step-card is-complete">
+                        <div class="step-badge">
+                            <span class="material-symbols-rounded">check_circle</span>
                         </div>
-                        <span class="pill">Live</span>
+                        <div class="step-info">
+                            <h3>Reading layout</h3>
+                            <p>Identifying structure and zones.</p>
+                        </div>
                     </div>
+                    <div class="process-step-card is-complete">
+                        <div class="step-badge">
+                            <span class="material-symbols-rounded">check_circle</span>
+                        </div>
+                        <div class="step-info">
+                            <h3>Extracting text</h3>
+                            <p>Reading order preserved.</p>
+                        </div>
+                    </div>
+                    <div class="process-step-card is-active">
+                        <div class="step-badge">
+                            <span class="material-symbols-rounded">sync</span>
+                        </div>
+                        <div class="step-info">
+                            <h3>Detecting clauses</h3>
+                            <p id="processing-status">Scoring liability and waivers.</p>
+                        </div>
+                    </div>
+                    <div class="process-step-card">
+                        <div class="step-badge">
+                            <span class="material-symbols-rounded">pending</span>
+                        </div>
+                        <div class="step-info">
+                            <h3>Scoring risk</h3>
+                            <p>Calculating severity.</p>
+                        </div>
+                    </div>
+                    <div class="process-step-card">
+                        <div class="step-badge">
+                            <span class="material-symbols-rounded">auto_awesome</span>
+                        </div>
+                        <div class="step-info">
+                            <h3>Explaining findings</h3>
+                            <p>Generating plain language.</p>
+                        </div>
+                    </div>
+                </div>
 
-                    <div class="process-steps" id="process-steps">
-                        <div class="process-step is-complete">
-                            <div class="process-dot">check</div>
-                            <div>
-                                <h3>Reading layout</h3>
-                                <p>Paragraphs, signature zones, and document structure identified.</p>
-                            </div>
-                        </div>
-                        <div class="process-step is-complete">
-                            <div class="process-dot">check</div>
-                            <div>
-                                <h3>Extracting text</h3>
-                                <p>High-confidence OCR preserved in reading order.</p>
-                            </div>
-                        </div>
-                        <div class="process-step is-active">
-                            <div class="process-dot">sync</div>
-                            <div>
-                                <h3>Detecting clauses</h3>
-                                <p id="processing-status">Scoring liability, arbitration, and waiver language.</p>
-                            </div>
-                        </div>
-                        <div class="process-step">
-                            <div class="process-dot">radio_button_unchecked</div>
-                            <div>
-                                <h3>Scoring risk</h3>
-                                <p>Severity and confidence are being calculated.</p>
-                            </div>
-                        </div>
-                        <div class="process-step">
-                            <div class="process-dot">radio_button_unchecked</div>
-                            <div>
-                                <h3>Explaining in plain language</h3>
-                                <p>Rewriting the risky parts for a non-lawyer.</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="processing-actions">
-                        <button class="btn btn-ghost" data-screen="landing">Cancel</button>
-                        <button class="btn btn-primary" id="processing-continue">View early findings</button>
-                    </div>
+                <div class="processing-footer-actions">
+                    <button class="btn btn-secondary" data-screen="landing">Cancel Analysis</button>
+                    <button class="btn btn-primary" id="processing-continue">View early findings</button>
                 </div>
             </div>
         </section>
@@ -469,64 +462,31 @@
 
             <div class="vault-stats">
                 <div class="metric-card reveal">
-                    <div class="metric-value">24</div>
+                    <div class="metric-value" id="vault-stat-processed">0</div>
                     <div class="metric-label">Processed</div>
                 </div>
                 <div class="metric-card reveal reveal-delay-2">
-                    <div class="metric-value">02</div>
+                    <div class="metric-value" id="vault-stat-high-risk">00</div>
                     <div class="metric-label">High Risk</div>
                 </div>
                 <div class="metric-card reveal reveal-delay-3">
-                    <div class="metric-value">82%</div>
+                    <div class="metric-value" id="vault-stat-avg-score">0%</div>
                     <div class="metric-label">Average Score</div>
                 </div>
             </div>
 
-            <div class="vault-list">
-                <article class="vault-item glass-card reveal">
-                    <div class="vault-item-top">
-                        <div class="eyebrow vault-kicker">Recent scan</div>
-                        <div class="vault-score-badge high">
-                            <span class="vault-score-number">82</span>
-                            <span class="vault-score-copy">High risk</span>
-                        </div>
-                    </div>
-                    <div class="vault-info">
-                        <div class="vault-title">Mortgage Disclosure Agreement</div>
-                        <div class="vault-meta">First National Horizon Bank · Oct 24, 2026</div>
-                        <p class="vault-summary">Flagged liability exposure, accelerated repayment terms, and limited
-                            dispute windows.</p>
-                    </div>
-                    <div class="vault-buttons">
-                        <button class="btn btn-primary" data-screen="dashboard">Open analysis</button>
-                        <button class="btn btn-secondary" data-screen="report">View report</button>
-                    </div>
-                </article>
-
-                <article class="vault-item glass-card reveal reveal-delay-2">
-                    <div class="vault-item-top">
-                        <div class="eyebrow vault-kicker">Needs review</div>
-                        <div class="vault-score-badge medium">
-                            <span class="vault-score-number">61</span>
-                            <span class="vault-score-copy">Watchlist</span>
-                        </div>
-                    </div>
-                    <div class="vault-info">
-                        <div class="vault-title">Surgery Consent Form</div>
-                        <div class="vault-meta">North Shore Medical · Oct 22, 2026</div>
-                        <p class="vault-summary">Marked broad consent language and weak cancellation protections for
-                            follow-up.</p>
-                    </div>
-                    <div class="vault-buttons">
-                        <button class="btn btn-primary" data-screen="dashboard">Open analysis</button>
-                        <button class="btn btn-secondary" data-screen="report">View report</button>
-                    </div>
-                </article>
+            <div class="vault-list" id="vault-list-container">
+                <!-- Dynamic content will be injected here -->
             </div>
         </section>
 
         <section class="screen" id="screen-report" data-screen="report">
             <div class="report-toolbar reveal">
+                <div class="report-nav-actions" style="display: flex; gap: 1rem; margin-bottom: 0.5rem;">
+                    <button class="btn btn-secondary btn-large" data-screen="dashboard" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">← Back to Results</button>
+                    <button class="btn btn-secondary btn-large" data-screen="vault" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">View Vault</button>
+                    <button class="btn btn-secondary btn-large" data-screen="landing" style="padding: 0.6rem 1.2rem; font-size: 0.9rem;">Scan Another</button>
+                </div>
                 <div>
                     <div class="eyebrow">Shareable output</div>
                     <h2>Decision report</h2>
