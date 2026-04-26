@@ -1,0 +1,60 @@
+{
+  "document_id": "doc_24109",
+  "overall_risk_score": "CRITICAL",
+  "risk_score_numeric": 100,
+  "summary_plain_english": "This document contains 5 potentially risky clause(s). The overall risk level is CRITICAL (100/100). Key concerns include Financial Liability, Liability Limitation, Waiver Of Rights. Review flagged sections carefully before signing.",
+  "flagged_clauses": [
+    {
+      "type": "FINANCIAL_LIABILITY",
+      "original_text": "The employee accepts full financial responsibility for all costs not covered\nby insurance, including out-of-network fees and deductibles.",
+      "translation": "You may be responsible for costs your insurance or another party does not cover.",
+      "severity": "CRITICAL",
+      "confidence": 0.95,
+      "source": "merged"
+    },
+    {
+      "type": "LIABILITY_LIMITATION",
+      "original_text": "In no event shall the company total liability exceed the amount of fees paid in\nthe preceding three months.",
+      "translation": "The other party may be limiting how much responsibility they have if something goes wrong.",
+      "severity": "CRITICAL",
+      "confidence": 0.93389,
+      "source": "merged"
+    },
+    {
+      "type": "LIABILITY_LIMITATION",
+      "original_text": "The company disclaims all liability for consequential damages and incidental\ndamages.",
+      "translation": "The other party may be limiting how much responsibility they have if something goes wrong.",
+      "severity": "CRITICAL",
+      "confidence": 0.92002,
+      "source": "merged"
+    },
+    {
+      "type": "LIABILITY_LIMITATION",
+      "original_text": "Section 5: Limitation of Liability.",
+      "translation": "The other party may be limiting how much responsibility they have if something goes wrong.",
+      "severity": "CRITICAL",
+      "confidence": 0.91183,
+      "source": "merged"
+    },
+    {
+      "type": "WAIVER_OF_RIGHTS",
+      "original_text": "The employee agrees to waive the right to bring a lawsuit against the company\nor its officers.",
+      "translation": "You may be giving up your ability to sue or take legal action.",
+      "severity": "CRITICAL",
+      "confidence": 0.85,
+      "source": "merged"
+    }
+  ],
+  "processing_metadata": {
+    "used_google_vision": false,
+    "used_distilbert": true,
+    "used_gemma": false,
+    "used_backboard": false,
+    "used_dcp": false,
+    "processing_time_ms": 256,
+    "ocr_mode": "pdf_text_extraction",
+    "model_source": "local",
+    "endpoint_mode": "real_analyze",
+    "extracted_text_preview": "EMPLOYMENT AGREEMENT - CONFIDENTIAL\nSection 1: Waiver of Rights. The employee agrees to waive the right to bring a lawsuit against the company\nor its officers. The employee releases the company from all claims, demands, and causes of action arising\nfrom employment. The employee agrees not to sue the"
+  }
+}

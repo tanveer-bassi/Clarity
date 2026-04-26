@@ -32,6 +32,11 @@ class ProcessingMetadata(BaseModel):
     used_backboard: bool = False
     used_dcp: bool = False
     processing_time_ms: int = 0
+    # Debug / honesty fields
+    ocr_mode: str = "fallback_mock"        # "google_vision" | "pdf_text_extraction" | "fallback_mock"
+    model_source: str = "rules_only"       # "local" | "huggingface" | "rules_only"
+    endpoint_mode: str = "real_analyze"     # "real_analyze" | "mock"
+    extracted_text_preview: str = ""        # First ~300 chars of extracted text
 
 
 class DCPMetrics(BaseModel):
@@ -88,4 +93,5 @@ class HealthResponse(BaseModel):
     status: str = "healthy"
     version: str = "1.0.0"
     model_loaded: bool = False
+    model_source: str = "rules_only"
     integrations: dict = {}

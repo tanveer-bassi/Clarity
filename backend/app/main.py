@@ -107,7 +107,7 @@ app.include_router(history.router, prefix="/api")
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
 async def health_check():
     """Health check endpoint — reports status and integration availability."""
-    from app.services.model_service import is_model_loaded, _load_model
+    from app.services.model_service import is_model_loaded, _load_model, get_model_source
 
     # Attempt to load the model if it hasn't been loaded yet
     _load_model()
@@ -116,6 +116,7 @@ async def health_check():
         status="healthy",
         version="1.0.0",
         model_loaded=is_model_loaded(),
+        model_source=get_model_source(),
         integrations={
             "google_vision": bool(
                 os.getenv("GOOGLE_APPLICATION_CREDENTIALS")

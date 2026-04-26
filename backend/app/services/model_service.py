@@ -34,11 +34,16 @@ _tokenizer = None
 _model = None
 _device = None
 _model_available = False
+_model_source = "rules_only"
+HF_MODEL_ID = os.getenv("CLEARCONSENT_HF_MODEL_ID", "1Ghoul1/clearconsent-distilbert-v2")
 
+def get_model_source() -> str:
+    """Return where the model was loaded from: local, huggingface, or rules_only."""
+    return _model_source
 
 def _load_model() -> bool:
-    """Attempt to load the DistilBERT model once. Returns success flag."""
-    global _tokenizer, _model, _device, _model_available
+    """Attempt to load the DistilBERT model. Local -> HF -> Fallback."""
+    global _tokenizer, _model, _device, _model_available, _model_source
 
     if _model_available:
         return True
@@ -47,20 +52,29 @@ def _load_model() -> bool:
         import torch
         from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
-        if not Path(MODEL_DIR).exists():
-            logger.warning("Model directory not found: %s", MODEL_DIR)
-            return False
-
         _device = "cuda" if torch.cuda.is_available() else "cpu"
-        _tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
-        _model = AutoModelForSequenceClassification.from_pretrained(MODEL_DIR)
+
+        # Try local first
+        if Path(MODEL_DIR).exists() and any(Path(MODEL_DIR).iterdir()):
+            logger.info("Attempting to load DistilBERT from local path: %s", MODEL_DIR)
+            _tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
+            _model = AutoModelForSequenceClassification.from_pretrained(MODEL_DIR)
+            _model_source = "local"
+        else:
+            # Fallback to Hugging Face
+            logger.info("Local path missing. Attempting Hugging Face: %s", HF_MODEL_ID)
+            _tokenizer = AutoTokenizer.from_pretrained(HF_MODEL_ID)
+            _model = AutoModelForSequenceClassification.from_pretrained(HF_MODEL_ID)
+            _model_source = "huggingface"
+
         _model.to(_device)
         _model.eval()
         _model_available = True
-        logger.info("DistilBERT loaded on %s from %s", _device, MODEL_DIR)
+        logger.info("DistilBERT loaded successfully on %s (source: %s)", _device, _model_source)
         return True
     except Exception as exc:
-        logger.warning("Could not load DistilBERT model: %s", exc)
+        logger.warning("Could not load DistilBERT model: %s. Falling back to rules.", exc)
+        _model_source = "rules_only"
         return False
 
 
@@ -242,6 +256,10 @@ def hybrid_predict(clauses: List[str], top_n: int = 5) -> List[dict]:
 
         # -- DistilBERT --
         for category, conf in _distilbert_classify(clause):
+            # Apply business rule: must-catch critical categories require actual keywords (rule match)
+            # to prevent AI hallucinations on low-risk documents.
+            strict_categories = _CRITICAL_CATEGORIES
+            
             key = f"{category}::{idx}"
             if key in seen:
                 # Merge: keep higher confidence, mark as merged
@@ -252,6 +270,11 @@ def hybrid_predict(clauses: List[str], top_n: int = 5) -> List[dict]:
                 elif existing["source"] == "rule":
                     existing["source"] = "merged"
             else:
+                # DistilBERT-only detection
+                if category in strict_categories:
+                    # Reject this detection because the rule didn't fire (keywords missing)
+                    continue
+                    
                 seen[key] = {
                     "type": category,
                     "original_text": clause,

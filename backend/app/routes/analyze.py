@@ -49,7 +49,6 @@ ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".heic", ".heif"}
 def _validate_file(file: UploadFile) -> None:
     """Basic file validation."""
     if file.content_type and file.content_type not in ALLOWED_TYPES:
-        # Also check by extension as a fallback
         ext = "." + file.filename.rsplit(".", 1)[-1].lower() if file.filename else ""
         if ext not in ALLOWED_EXTENSIONS:
             raise HTTPException(
@@ -64,7 +63,7 @@ def _make_doc_id() -> str:
 
 
 # ---------------------------------------------------------------------------
-# POST /api/analyze — Full pipeline
+# POST /api/analyze — Full pipeline (reads actual uploaded file)
 # ---------------------------------------------------------------------------
 
 @router.post("", response_model=AnalysisResponse)
@@ -73,26 +72,34 @@ async def analyze_document(
     user_id: Optional[str] = Form(default="demo_user"),
 ):
     """
-    Analyze an uploaded document through the full ClearConsent pipeline:
-    1. OCR via Google Vision (or mock fallback)
-    2. Clause splitting
-    3. Hybrid classification (rules + DistilBERT)
-    4. Risk score computation
-    5. Plain-English explanations via Gemma (or fallback)
-    6. Save to Backboard consent vault (or mock)
+    Analyze an uploaded document through the full ClearConsent pipeline.
+    This endpoint reads the ACTUAL file — it does NOT return mock data.
     """
     start = time.perf_counter()
 
     _validate_file(file)
 
-    # --- Step 1: Extract text ---
-    raw_text, used_vision = await vision_service.extract_text_from_upload(file)
+    # --- Logging: uploaded file info ---
+    logger.info("=" * 60)
+    logger.info("ANALYZE REQUEST")
+    logger.info("  filename:     %s", file.filename)
+    logger.info("  content_type: %s", file.content_type)
+    logger.info("  endpoint:     /api/analyze (real)")
+
+    # --- Step 1: Extract text from the actual uploaded file ---
+    raw_text, used_vision, ocr_mode = await vision_service.extract_text_from_upload(file)
+
+    logger.info("  ocr_mode:     %s", ocr_mode)
+    logger.info("  used_vision:  %s", used_vision)
+    logger.info("  text_length:  %d chars", len(raw_text))
+    logger.info("  text_preview: %s", raw_text[:300].replace("\n", " "))
 
     if not raw_text.strip():
         raise HTTPException(status_code=422, detail="Could not extract text from the uploaded file.")
 
     # --- Step 2: Split into clauses ---
     clauses = model_service.split_into_clauses(raw_text)
+    logger.info("  clauses_found: %d", len(clauses))
 
     if not clauses:
         raise HTTPException(status_code=422, detail="No analysable clauses found in the document.")
@@ -100,9 +107,15 @@ async def analyze_document(
     # --- Step 3: Hybrid classification ---
     flagged_raw = model_service.hybrid_predict(clauses, top_n=5)
     used_distilbert = model_service.is_model_loaded()
+    model_source = model_service.get_model_source()
+
+    logger.info("  model_source:  %s", model_source)
+    logger.info("  used_distilbert: %s", used_distilbert)
+    logger.info("  flagged_clauses: %d", len(flagged_raw))
 
     # --- Step 4: Risk score ---
     risk_numeric, risk_label = model_service.compute_risk_score(flagged_raw)
+    logger.info("  risk_score:    %d (%s)", risk_numeric, risk_label)
 
     # --- Step 5: Plain-English explanations ---
     flagged_explained, used_gemma = await gemma_service.explain_clauses(flagged_raw)
@@ -115,6 +128,10 @@ async def analyze_document(
     # --- Step 7: Build response ---
     doc_id = _make_doc_id()
     elapsed_ms = int((time.perf_counter() - start) * 1000)
+
+    logger.info("  used_gemma:    %s", used_gemma)
+    logger.info("  processing_ms: %d", elapsed_ms)
+    logger.info("=" * 60)
 
     flagged_clauses = [
         FlaggedClause(
@@ -138,9 +155,13 @@ async def analyze_document(
             used_google_vision=used_vision,
             used_distilbert=used_distilbert,
             used_gemma=used_gemma,
-            used_backboard=False,  # Updated below
+            used_backboard=False,
             used_dcp=False,
             processing_time_ms=elapsed_ms,
+            ocr_mode=ocr_mode,
+            model_source=model_source,
+            endpoint_mode="real_analyze",
+            extracted_text_preview=raw_text[:300],
         ),
     )
 
@@ -156,7 +177,7 @@ async def analyze_document(
 
 
 # ---------------------------------------------------------------------------
-# POST /api/analyze/mock — Instant demo
+# POST /api/analyze/mock — Instant demo (hardcoded, clearly labeled)
 # ---------------------------------------------------------------------------
 
 @router.post("/mock", response_model=AnalysisResponse)
@@ -164,6 +185,7 @@ async def analyze_mock():
     """
     Return a polished demo response instantly.
     Critical fallback for hackathon demos when external APIs are down.
+    This is explicitly NOT real analysis — metadata marks it as mock.
     """
     return MOCK_ANALYSIS
 
@@ -184,19 +206,18 @@ async def analyze_dcp(
     start = time.perf_counter()
 
     if file is None:
-        # Return polished mock DCP response
         return MOCK_DCP_ANALYSIS
 
     _validate_file(file)
 
     # --- OCR ---
-    raw_text, used_vision = await vision_service.extract_text_from_upload(file)
+    raw_text, used_vision, ocr_mode = await vision_service.extract_text_from_upload(file)
     clauses = model_service.split_into_clauses(raw_text)
 
     if not clauses:
         raise HTTPException(status_code=422, detail="No analysable clauses found.")
 
-    # --- Simulate pages (split text into ~page-sized chunks) ---
+    # --- Simulate pages ---
     page_size = max(1, len(clauses) // 4)
     pages = [
         " ".join(clauses[i : i + page_size])
@@ -211,6 +232,7 @@ async def analyze_dcp(
     # --- Classification ---
     flagged_raw = model_service.hybrid_predict(clauses, top_n=5)
     used_distilbert = model_service.is_model_loaded()
+    model_source = model_service.get_model_source()
 
     risk_numeric, risk_label = model_service.compute_risk_score(flagged_raw)
     flagged_explained, used_gemma = await gemma_service.explain_clauses(flagged_raw)
@@ -246,5 +268,9 @@ async def analyze_dcp(
             used_backboard=False,
             used_dcp=used_dcp,
             processing_time_ms=elapsed_ms,
+            ocr_mode=ocr_mode,
+            model_source=model_source,
+            endpoint_mode="real_analyze",
+            extracted_text_preview=raw_text[:300],
         ),
     )

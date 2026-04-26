@@ -1,22 +1,28 @@
 """
-vision_service.py — Google Cloud Vision OCR with mock fallback.
+vision_service.py — Text extraction with cascading strategy.
 
-If GOOGLE_APPLICATION_CREDENTIALS (or GOOGLE_CLOUD_VISION_KEY) is set, uses
-the real Vision API.  Otherwise returns realistic mock OCR text so the demo
-always works.
+1. Google Cloud Vision API  (if GOOGLE_APPLICATION_CREDENTIALS is set)
+2. Local PDF text extraction (PyPDF2 — works for text-based PDFs)
+3. Mock OCR text             (only for /api/analyze/mock or as last resort)
+
+The key principle: /api/analyze must read the ACTUAL uploaded file.
+Mock text is only for the explicit /api/analyze/mock demo endpoint.
 """
 
 from __future__ import annotations
 
+import io
 import logging
 import os
-import tempfile
-from pathlib import Path
-from typing import Optional
+from typing import Literal
 
 from fastapi import UploadFile
 
 logger = logging.getLogger("clearconsent.vision")
+
+# Type alias for OCR mode reporting
+OcrMode = Literal["google_vision", "pdf_text_extraction", "fallback_mock"]
+
 
 # ---------------------------------------------------------------------------
 # Configuration check
@@ -32,20 +38,16 @@ def _vision_available() -> bool:
 
 
 # ---------------------------------------------------------------------------
-# Real Vision OCR
+# Strategy 1: Real Google Cloud Vision OCR
 # ---------------------------------------------------------------------------
 
 
-async def _real_extract(file: UploadFile) -> str:
-    """Use Google Cloud Vision API to extract text from the uploaded file."""
+async def _google_vision_extract(content: bytes) -> str | None:
+    """Use Google Cloud Vision API. Returns text or None on failure."""
     try:
         from google.cloud import vision  # type: ignore
 
         client = vision.ImageAnnotatorClient()
-
-        content = await file.read()
-        await file.seek(0)
-
         image = vision.Image(content=content)
         response = client.text_detection(image=image)
 
@@ -55,14 +57,40 @@ async def _real_extract(file: UploadFile) -> str:
         texts = response.text_annotations
         if texts:
             return texts[0].description
-        return ""
+        return None
     except Exception as exc:
-        logger.error("Vision API error: %s — falling back to mock", exc)
-        return _mock_text()
+        logger.warning("Google Vision API error: %s", exc)
+        return None
 
 
 # ---------------------------------------------------------------------------
-# Mock OCR text — crafted to exercise every must-catch demo category
+# Strategy 2: Local PDF text extraction (PyPDF2)
+# ---------------------------------------------------------------------------
+
+
+def _extract_pdf_text(content: bytes) -> str | None:
+    """Extract text from a PDF using PyPDF2. Returns text or None."""
+    try:
+        from PyPDF2 import PdfReader
+
+        reader = PdfReader(io.BytesIO(content))
+        pages_text = []
+        for page in reader.pages:
+            text = page.extract_text()
+            if text:
+                pages_text.append(text.strip())
+
+        full_text = "\n\n".join(pages_text).strip()
+        if len(full_text) > 20:
+            return full_text
+        return None
+    except Exception as exc:
+        logger.warning("PyPDF2 extraction failed: %s", exc)
+        return None
+
+
+# ---------------------------------------------------------------------------
+# Mock OCR text — only used by /api/analyze/mock or as absolute last resort
 # ---------------------------------------------------------------------------
 
 MOCK_OCR_TEXT = """PATIENT CONSENT AND TREATMENT AGREEMENT
@@ -94,26 +122,50 @@ Patient Signature: _________________________  Date: ____________
 """
 
 
-def _mock_text() -> str:
-    return MOCK_OCR_TEXT.strip()
-
-
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
 
 
-async def extract_text_from_upload(file: UploadFile) -> tuple[str, bool]:
+async def extract_text_from_upload(file: UploadFile) -> tuple[str, bool, OcrMode]:
     """
-    Extract text from an uploaded file.
+    Extract text from an uploaded file using a cascading strategy.
 
-    Returns (extracted_text, used_google_vision).
+    Returns (extracted_text, used_google_vision, ocr_mode).
     """
+    content = await file.read()
+    await file.seek(0)
+
+    filename = (file.filename or "").lower()
+    is_pdf = filename.endswith(".pdf") or file.content_type == "application/pdf"
+
+    # --- Strategy 1: Google Cloud Vision ---
     if _vision_available():
-        text = await _real_extract(file)
+        logger.info("Attempting Google Cloud Vision OCR...")
+        text = await _google_vision_extract(content)
         if text:
-            return text, True
-        # If Vision returned empty, fall back
-        logger.warning("Vision returned empty text; using mock")
+            logger.info("Google Vision extracted %d chars", len(text))
+            return text, True, "google_vision"
+        logger.warning("Google Vision returned no text")
 
-    return _mock_text(), False
+    # --- Strategy 2: Local PDF text extraction ---
+    if is_pdf:
+        logger.info("Attempting local PDF text extraction (PyPDF2)...")
+        text = _extract_pdf_text(content)
+        if text:
+            logger.info("PyPDF2 extracted %d chars from PDF", len(text))
+            return text, False, "pdf_text_extraction"
+        logger.warning("PyPDF2 could not extract text (scanned PDF or image-only?)")
+
+    # --- Strategy 3: Fallback mock text ---
+    logger.warning(
+        "No text extraction succeeded for '%s' — returning mock OCR text. "
+        "This means the result will NOT reflect the actual document content.",
+        file.filename,
+    )
+    return MOCK_OCR_TEXT.strip(), False, "fallback_mock"
+
+
+def get_mock_text() -> str:
+    """Return the mock OCR text. Used explicitly by /api/analyze/mock."""
+    return MOCK_OCR_TEXT.strip()

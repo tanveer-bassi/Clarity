@@ -100,12 +100,16 @@ MOCK_ANALYSIS = {
         },
     ],
     "processing_metadata": {
-        "used_google_vision": True,
-        "used_distilbert": True,
-        "used_gemma": True,
-        "used_backboard": True,
+        "used_google_vision": False,
+        "used_distilbert": False,
+        "used_gemma": False,
+        "used_backboard": False,
         "used_dcp": False,
         "processing_time_ms": 1840,
+        "ocr_mode": "fallback_mock",
+        "model_source": "rules_only",
+        "endpoint_mode": "mock",
+        "extracted_text_preview": "[MOCK DEMO DATA — not from a real document]",
     },
 }
 
@@ -121,5 +125,6 @@ MOCK_DCP_ANALYSIS = {
     "processing_metadata": {
         **MOCK_ANALYSIS["processing_metadata"],
         "used_dcp": True,
+        "endpoint_mode": "mock",
     },
 }

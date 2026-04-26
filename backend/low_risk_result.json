@@ -1,0 +1,36 @@
+{
+  "document_id": "doc_70594",
+  "overall_risk_score": "MEDIUM",
+  "risk_score_numeric": 40,
+  "summary_plain_english": "This document contains 2 potentially risky clause(s). The overall risk level is MEDIUM (40/100). Key concerns include Auto Renewal, Termination. Review flagged sections carefully before signing.",
+  "flagged_clauses": [
+    {
+      "type": "TERMINATION",
+      "original_text": "I may withdraw my consent at any time by providing written notice to the office of communications.",
+      "translation": "The other party may be able to end the agreement with limited notice or justification.",
+      "severity": "HIGH",
+      "confidence": 0.81941,
+      "source": "distilbert"
+    },
+    {
+      "type": "AUTO_RENEWAL",
+      "original_text": "This consent is valid for a period of one\nyear from the date of signing below.",
+      "translation": "This agreement may renew automatically unless you cancel in time.",
+      "severity": "HIGH",
+      "confidence": 0.68323,
+      "source": "distilbert"
+    }
+  ],
+  "processing_metadata": {
+    "used_google_vision": false,
+    "used_distilbert": true,
+    "used_gemma": false,
+    "used_backboard": false,
+    "used_dcp": false,
+    "processing_time_ms": 90,
+    "ocr_mode": "pdf_text_extraction",
+    "model_source": "local",
+    "endpoint_mode": "real_analyze",
+    "extracted_text_preview": "STANDARD PHOTOGRAPHY CONSENT FORM\nI hereby grant permission for my photograph to be used for educational purposes by the university. I\nunderstand that my image will be used respectfully and professionally in university publications and materials.\nI may withdraw my consent at any time by providing wr"
+  }
+}

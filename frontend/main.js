@@ -142,9 +142,63 @@ async function initSession() {
 // ---------------------------------------------------------------------------
 
 function mapApiResponse(data) {
+  console.log("[Clarity] API response received:", JSON.stringify(data, null, 2));
+  console.log("[Clarity] risk_score_numeric:", data.risk_score_numeric);
+  console.log("[Clarity] overall_risk_score:", data.overall_risk_score);
+  console.log("[Clarity] flagged_clauses:", data.flagged_clauses?.length);
+  console.log("[Clarity] processing_metadata:", data.processing_metadata);
+
   state.score = data.risk_score_numeric ?? 75;
   state.summary = data.summary_plain_english ?? "";
   if (data.dcp_metrics) state.dcpMetrics = data.dcp_metrics;
+
+  // --- Update dynamic dashboard elements ---
+  const headline = document.getElementById("discovery-headline");
+  const summaryEl = document.getElementById("discovery-summary");
+  const criticalCountEl = document.getElementById("discovery-critical-count");
+  const clauseCountEl = document.getElementById("discovery-clause-count");
+  const criticalPill = document.getElementById("discovery-critical-pill");
+  const bottomline = document.getElementById("discovery-bottomline");
+
+  const allClauses = data.flagged_clauses ?? [];
+  const criticals = allClauses.filter((c) => c.severity === "CRITICAL").length;
+  const highs = allClauses.filter((c) => c.severity === "HIGH").length;
+
+  // Headline based on actual risk level
+  const riskLabel = data.overall_risk_score ?? "MEDIUM";
+  const headlines = {
+    CRITICAL: "Critical Risk Detected",
+    HIGH: "High-Risk Exposure Detected",
+    MEDIUM: "Moderate Risk — Review Recommended",
+    LOW: "Low Risk — Looking Good",
+  };
+  if (headline) headline.textContent = headlines[riskLabel] ?? "Analysis Complete";
+  if (summaryEl) summaryEl.textContent = state.summary || "Analysis complete. Review the flagged clauses below.";
+
+  if (criticalCountEl) {
+    if (criticals > 0) {
+      criticalCountEl.textContent = `${criticals} Critical Flag${criticals !== 1 ? "s" : ""}`;
+    } else if (highs > 0) {
+      criticalCountEl.textContent = `${highs} High Flag${highs !== 1 ? "s" : ""}`;
+    } else {
+      criticalCountEl.textContent = "No Critical Flags";
+    }
+  }
+  if (criticalPill) {
+    criticalPill.classList.toggle("red", criticals > 0);
+    criticalPill.classList.toggle("active", criticals > 0 || highs > 0);
+  }
+  if (clauseCountEl) clauseCountEl.textContent = `${allClauses.length} Flagged Clause${allClauses.length !== 1 ? "s" : ""}`;
+
+  if (bottomline) {
+    const bottomLines = {
+      CRITICAL: "This document carries critical risk. Professional legal review is strongly recommended before signing.",
+      HIGH: "This document has elevated risk. Consider negotiating key clauses before signing.",
+      MEDIUM: "This document has moderate risk. Review the flagged items but overall exposure is manageable.",
+      LOW: "This document appears safe. No major risks were detected in the analysed text.",
+    };
+    bottomline.textContent = bottomLines[riskLabel] ?? "Review complete.";
+  }
 
   const severityBadge = { CRITICAL: "Critical flag", HIGH: "High risk flag", MEDIUM: "Warning flag", LOW: "Info flag" };
   const typeLabel = (t) =>
@@ -153,8 +207,8 @@ function mapApiResponse(data) {
   const mapped = (data.flagged_clauses ?? []).map((c) => ({
     badge: severityBadge[c.severity] ?? "Flag",
     title: typeLabel(c.type),
-    subtitle: `${c.source === "distilbert" ? "AI detected" : "Rule detected"} · ${state.uploadedFileName}`,
-    original: `“${c.original_text}”`,
+    subtitle: `${c.source === "distilbert" ? "AI detected" : c.source === "merged" ? "AI + Rule detected" : "Rule detected"} · ${state.uploadedFileName}`,
+    original: `\u201c${c.original_text}\u201d`,
     plain: c.translation || c.original_text,
     impacts: [
       [
@@ -165,7 +219,9 @@ function mapApiResponse(data) {
         "Detected by",
         c.source === "distilbert"
           ? "Custom DistilBERT model trained on legal contracts."
-          : "Deterministic rule-based classifier.",
+          : c.source === "merged"
+            ? "Both DistilBERT model and rule-based classifier."
+            : "Deterministic rule-based classifier.",
       ],
     ],
   }));
@@ -178,7 +234,7 @@ function mapApiResponse(data) {
             badge: "All clear",
             title: "No high-risk clauses found",
             subtitle: state.uploadedFileName,
-            original: "“No flagged clauses were detected in this document.”",
+            original: "\u201cNo flagged clauses were detected in this document.\u201d",
             plain: "This document appears to carry low overall risk.",
             impacts: [
               ["Result", "No significant risk clauses were identified."],
@@ -189,6 +245,7 @@ function mapApiResponse(data) {
 
   state.clauseIndex = 0;
 }
+
 
 // ---------------------------------------------------------------------------
 // Report generator (Phase 5)
@@ -412,6 +469,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   // ---------------------------------------------------------------------------
 
   async function analyzeFile(file) {
+    console.log("[Clarity] analyzeFile called");
+    console.log("[Clarity] endpoint:", `${API_BASE}/api/analyze`);
+    console.log("[Clarity] file:", file.name, file.type, file.size, "bytes");
     processingTitle.textContent = "Analyzing your document";
     processingStatus.textContent = "Extracting text and scanning for risk clauses...";
     setScreen("processing");
