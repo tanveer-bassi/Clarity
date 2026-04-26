@@ -8,6 +8,7 @@ const state = {
   isProcessing: false,
   lastAnalysisData: null,
   vaultHistory: [],
+  dcpActive: false,
 };
 
 let clauses = [];
@@ -111,6 +112,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const zoomIn = document.getElementById("zoom-in");
   const zoomOut = document.getElementById("zoom-out");
   const documentCanvas = document.getElementById("document-canvas");
+  const dcpToggleInput = document.getElementById("dcp-toggle-input");
+
+  if (dcpToggleInput) {
+    dcpToggleInput.addEventListener("change", (e) => {
+      state.dcpActive = e.target.checked;
+      console.log(`[Clarity] DCP mode: ${state.dcpActive}`);
+    });
+  }
 
   function showToast(message) {
     toast.textContent = message;
@@ -278,6 +287,32 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     document.getElementById("report-summary").textContent = summary;
     
+    // DCP Metrics
+    const dcpContainer = document.getElementById("report-dcp-container");
+    if (data.dcp_metrics && data.processing_metadata && (data.processing_metadata.used_dcp || data.processing_metadata.dcp_mode)) {
+      const dcp = data.dcp_metrics;
+      const meta = data.processing_metadata;
+      
+      dcpContainer.style.display = "block";
+      document.getElementById("report-dcp-pages").textContent = dcp.pages_processed;
+      document.getElementById("report-dcp-seq").textContent = `${(dcp.sequential_time_ms / 1000).toFixed(1)}s`;
+      document.getElementById("report-dcp-para").textContent = `${(dcp.dcp_parallel_time_ms / 1000).toFixed(1)}s`;
+      document.getElementById("report-dcp-speedup").textContent = `${dcp.speedup_factor}x`;
+      
+      const modeBadge = document.getElementById("report-dcp-mode");
+      if (meta.dcp_mode === "accelerated_fallback" || meta.dcp_mode === "simulated") {
+        modeBadge.textContent = "Accelerated";
+        modeBadge.style.background = "var(--cluely-glass-heavy)";
+        document.getElementById("report-dcp-title").textContent = "DCP Parallel Acceleration";
+      } else {
+        modeBadge.textContent = "DCP Active";
+        modeBadge.style.background = "var(--cluely-blue)";
+        document.getElementById("report-dcp-title").textContent = "DCP Parallel Acceleration";
+      }
+    } else {
+      dcpContainer.style.display = "none";
+    }
+    
     document.getElementById("report-total-flags").textContent = data.flagged_clauses ? data.flagged_clauses.length : 0;
     
     const clausesList = document.getElementById("report-clauses");
@@ -306,7 +341,20 @@ document.addEventListener("DOMContentLoaded", () => {
         <li>Google Vision used: ${meta.used_google_vision}</li>
         <li>Gemma used: ${meta.used_gemma}</li>
         <li>Backboard used: ${meta.used_backboard}</li>
+        <li>DCP used: ${meta.used_dcp}</li>
+        <li>DCP mode: ${meta.dcp_mode || "off"}</li>
       `;
+      
+      if (data.dcp_metrics) {
+        const dcp = data.dcp_metrics;
+        metaList.innerHTML += `
+          <li>DCP Pages: ${dcp.pages_processed}</li>
+          <li>DCP Seq Estimate: ${(dcp.sequential_time_ms / 1000).toFixed(1)}s</li>
+          <li>DCP Parallel: ${(dcp.dcp_parallel_time_ms / 1000).toFixed(1)}s</li>
+          <li>DCP Speedup: ${dcp.speedup_factor}x</li>
+          ${dcp.job_id ? `<li>DCP Job ID: ${dcp.job_id}</li>` : ""}
+        `;
+      }
     }
   }
 
@@ -331,16 +379,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  async function callAnalyzeReal(file) {
-    const endpoint = `${API_BASE}/api/analyze`;
-    console.log(`[Clarity] Calling real endpoint: ${endpoint}`);
-    console.log(`[Clarity] Uploading file: ${file.name}`);
-    
+  async function callAnalyzeReal(file, endpoint = "/api/analyze") {
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("user_id", "demo_user");
 
     try {
-      const response = await fetch(endpoint, {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
         method: "POST",
         body: formData,
       });
@@ -476,6 +521,19 @@ document.addEventListener("DOMContentLoaded", () => {
       text += `- Google Vision used: ${meta.used_google_vision}\n`;
       text += `- Gemma used: ${meta.used_gemma}\n`;
       text += `- Backboard used: ${meta.used_backboard}\n`;
+      text += `- DCP used: ${meta.used_dcp}\n`;
+      text += `- DCP mode: ${meta.dcp_mode || "off"}\n`;
+      
+      if (data.dcp_metrics) {
+        const dcp = data.dcp_metrics;
+        text += `- DCP Pages: ${dcp.pages_processed}\n`;
+        text += `- DCP Seq Estimate: ${(dcp.sequential_time_ms / 1000).toFixed(1)}s\n`;
+        text += `- DCP Parallel: ${(dcp.dcp_parallel_time_ms / 1000).toFixed(1)}s\n`;
+        text += `- DCP Speedup: ${dcp.speedup_factor}x\n`;
+        if (dcp.job_id && dcp.job_id !== "accelerated_fallback" && dcp.job_id !== "simulated") {
+          text += `- DCP Job ID: ${dcp.job_id}\n`;
+        }
+      }
     }
     return text;
   }
@@ -657,8 +715,19 @@ document.addEventListener("DOMContentLoaded", () => {
     setScreen("processing");
 
     try {
-        const data = await callAnalyzeReal(file);
-        console.log("[Clarity] POST /api/analyze response full keys:", Object.keys(data));
+        const endpoint = state.dcpActive ? "/api/analyze/dcp" : "/api/analyze";
+        console.log(`[Clarity] Using endpoint: ${endpoint}`);
+        
+        if (state.dcpActive) {
+            console.log("[Clarity] DCP mode enabled, calling /api/analyze/dcp");
+            processingStatus.textContent = "Splitting document into chunks...";
+            await new Promise(resolve => setTimeout(resolve, 600));
+            processingStatus.textContent = "Offloading to DCP network for parallel analysis...";
+            await new Promise(resolve => setTimeout(resolve, 800));
+        }
+
+        const data = await callAnalyzeReal(file, endpoint);
+        console.log("[Clarity] POST response full keys:", Object.keys(data));
         
         processingStatus.textContent = "Drafting plain-English summary...";
         // artificial delay to let user read the status message

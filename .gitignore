@@ -33,6 +33,8 @@ backend/venv/
 backend/**/*.env
 backend/credentials/
 backend/credentials/*.json
+.dcp/
+*.keystore
 
 # OS/editor
 .DS_Store
