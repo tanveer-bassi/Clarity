@@ -1,0 +1,21 @@
+# ClearConsent Backend — Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# --- Core ---
+fastapi>=0.115.0
+uvicorn[standard]>=0.34.0
+python-dotenv>=1.1.0
+python-multipart>=0.0.20
+pydantic>=2.11.0
+httpx>=0.28.0
+
+# --- ML / Model ---
+torch>=2.0.0
+transformers>=4.40.0
+safetensors>=0.5.0
+
+# --- Google Cloud Vision (optional — install when using real OCR) ---
+# google-cloud-vision>=3.7.0
+
+# --- Google GenAI / Gemma (optional — install when using real LLM) ---
+# google-genai>=1.0.0

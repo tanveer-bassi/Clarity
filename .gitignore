@@ -1,3 +1,42 @@
+# env files
+.env
+backend/.env
+frontend/.env
+frontend/.env.local
+*.env
+
+# virtual environments
+.venv/
+venv/
+backend/.venv/
+backend/venv/
+ml/.venv/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# ML local env + trained model artifacts
+ml/.venv/
+ml/venv/
+ml/clearconsent-distilbert/
+ml/clearconsent-distilbert-v2/
+ml/**/checkpoint-*/
+ml/**/*.safetensors
+ml/**/*.pt
+ml/**/*.bin
+
+# Backend env/venv
+backend/.venv/
+backend/venv/
+backend/**/*.env
+
+# OS/editor
+.DS_Store
+.vscode/
+
+# frontend
 node_modules/
 dist/
 .DS_Store
