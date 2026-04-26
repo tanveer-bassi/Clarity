@@ -4,6 +4,7 @@ const state = {
   score: 75,
   clauseIndex: 0,
   zoom: 100,
+  scoreAnimated: false,
 };
 
 const clauses = [
@@ -144,26 +145,26 @@ document.addEventListener("DOMContentLoaded", () => {
     }, 2200);
   }
 
+  let scrollObserver;
   function revealOnScroll() {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add("is-visible");
-        }
-      });
-    }, { threshold: 0.1 });
+    if (!scrollObserver) {
+      scrollObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("is-visible");
+          }
+        });
+      }, { threshold: 0.12, rootMargin: "0px 0px -120px 0px" });
+    }
 
-    document.querySelectorAll(".reveal").forEach((node) => {
-      observer.observe(node);
+    const items = document.querySelectorAll(".reveal:not(.is-visible)");
+    items.forEach((node) => {
+      scrollObserver.observe(node);
     });
   }
 
   function revealScreen(screen) {
-    screen.querySelectorAll(".reveal").forEach((node) => {
-      node.classList.remove("is-visible");
-    });
-    // Let IntersectionObserver handle the initial reveal if they are in view
-    requestAnimationFrame(revealOnScroll);
+    revealOnScroll();
   }
 
   function updateNavState() {
@@ -182,35 +183,56 @@ document.addEventListener("DOMContentLoaded", () => {
     const duration = 1500;
 
     const scoreLabel = document.querySelector(".score-label");
+    const clampedTarget = Math.max(0, Math.min(100, target));
 
-    // Define colors and labels based on risk level
-    let riskColor = "#4f46e5"; // Low
-    let riskText = "Optimal";
-    if (target >= 80) {
-      riskColor = "#dc2626"; // High
-      riskText = "High Risk";
-    } else if (target >= 50) {
-      riskColor = "#f59e0b"; // Medium
-      riskText = "Watchlist";
+    function getRiskColor(score) {
+      const normalized = Math.max(0, Math.min(100, score)) / 100;
+      const hue = 8 + (120 - 8) * (1 - normalized);
+      const saturation = 88;
+      const lightness = 28 + normalized * 24;
+      return `hsl(${hue} ${saturation}% ${lightness}%)`;
     }
 
-    scoreRing.style.stroke = riskColor;
-    if (scoreLabel) scoreLabel.textContent = riskText;
+    function getRiskText(score) {
+      if (score >= 80) return "High Risk";
+      if (score >= 50) return "Watchlist";
+      return "Optimal";
+    }
+
+    if (scoreLabel) scoreLabel.textContent = getRiskText(clampedTarget);
 
     function frame(now) {
       const progress = Math.min((now - start) / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
-      const currentScore = Math.round(target * eased);
+      const currentScore = Math.round(clampedTarget * eased);
 
       scoreNumber.textContent = String(currentScore);
 
       const offset = circumference - (currentScore / 100) * circumference;
       scoreRing.style.strokeDashoffset = String(offset);
+      scoreRing.style.stroke = getRiskColor(currentScore);
 
       if (progress < 1) requestAnimationFrame(frame);
     }
 
+    state.scoreAnimated = true;
     requestAnimationFrame(frame);
+  }
+
+  function renderScore(target) {
+    const circumference = 2 * Math.PI * 92;
+    const clampedTarget = Math.max(0, Math.min(100, target));
+    const normalized = clampedTarget / 100;
+    const scoreLabel = document.querySelector(".score-label");
+
+    scoreRing.style.strokeDasharray = `${circumference} ${circumference}`;
+    scoreRing.style.strokeDashoffset = String(circumference - normalized * circumference);
+    scoreRing.style.stroke = getRiskColor(clampedTarget);
+    scoreNumber.textContent = String(clampedTarget);
+
+    if (scoreLabel) {
+      scoreLabel.textContent = clampedTarget >= 80 ? "High Risk" : clampedTarget >= 50 ? "Watchlist" : "Optimal";
+    }
   }
 
   function updateClauseContent() {
@@ -227,15 +249,27 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function setScreen(name) {
+    const isNewScreen = state.currentScreen !== name;
     state.currentScreen = name;
+
+    // Only scroll to top if we are actually switching to a different section
+    if (isNewScreen) {
+      window.scrollTo(0, 0);
+    }
+
     screens.forEach((screen) => {
       screen.classList.toggle("is-active", screen.dataset.screen === name);
       if (screen.dataset.screen === name) revealScreen(screen);
     });
     updateNavState();
-    window.scrollTo({ top: 0, behavior: "smooth" });
 
-    if (name === "dashboard") animateScore(state.score);
+    if (name === "dashboard") {
+      if (state.scoreAnimated) {
+        renderScore(state.score);
+      } else {
+        animateScore(state.score);
+      }
+    }
   }
 
   function simulateProcessing() {
@@ -304,7 +338,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const headerScanTrigger = document.getElementById("header-scan-trigger");
   const insightsScanTrigger = document.getElementById("insights-scan-trigger");
-  const headerInsightsUpload = document.getElementById("header-insights-upload");
   const vaultScanTrigger = document.getElementById("vault-scan-trigger");
 
   if (headerScanTrigger) {
@@ -315,9 +348,7 @@ document.addEventListener("DOMContentLoaded", () => {
     insightsScanTrigger.addEventListener("click", () => fileInput.click());
   }
 
-  if (headerInsightsUpload) {
-    headerInsightsUpload.addEventListener("click", () => fileInput.click());
-  }
+
 
   if (vaultScanTrigger) {
     vaultScanTrigger.addEventListener("click", () => fileInput.click());
@@ -382,6 +413,20 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") closeModal();
   });
+
+  // Scroll-sensitive header
+  const header = document.querySelector("header");
+  if (header) {
+    const checkScroll = () => {
+      if (window.scrollY > 50) {
+        header.classList.add("scrolled");
+      } else {
+        header.classList.remove("scrolled");
+      }
+    };
+    window.addEventListener("scroll", checkScroll);
+    checkScroll(); // Check once on load
+  }
 
   updateClauseContent();
   setScreen("landing");

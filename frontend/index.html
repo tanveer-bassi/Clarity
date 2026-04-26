@@ -20,6 +20,7 @@
         rel="stylesheet" />
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="icon" type="image/svg+xml" href="assets/logo.svg">
     <link rel="stylesheet" href="index.css">
 </head>
 
@@ -39,28 +40,24 @@
         </nav>
 
         <div class="topbar-actions">
-            <button class="btn btn-primary" id="header-scan-trigger">Scan document</button>
+            <button class="btn btn-dark" id="header-scan-trigger">Scan document</button>
         </div>
     </header>
 
     <main class="shell app-shell">
         <section class="screen is-active" id="screen-landing" data-screen="landing">
-            <div class="hero-centered reveal">
+            <div class="hero-centered">
                 <h1>Read the fine print. With total <span class="text-accent">Clarity</span>.</h1>
                 <p class="lede">Clarity uses <strong>vision-first AI</strong> to scan medical forms and legal contracts,
                     instantly surfacing <strong>hidden risks</strong> and complex liability before you sign.</p>
                 <div class="hero-actions centered">
-                    <button class="btn btn-primary btn-large" id="landing-upload">Start Analysis</button>
+                    <button class="btn btn-shimmer btn-large" id="landing-upload">Start Analysis</button>
                     <button class="btn btn-secondary btn-large" data-screen="vault">View Vault</button>
-                </div>
-
-                <div class="section-divider reveal reveal-delay-2">
-                    <div class="divider-text">The Clarity Process</div>
                 </div>
 
                 <div class="how-it-works reveal reveal-delay-3">
                     <div class="section-header-centered">
-                        <div class="eyebrow">The Clarity Lifecycle</div>
+
                         <h2>Autonomous Intelligence for Every Clause</h2>
                     </div>
 
@@ -254,12 +251,7 @@
                         <p>Clarity breaks the document into the few issues that matter most so you can decide whether to
                             sign, negotiate, or get help.</p>
                     </div>
-                    <div class="dashboard-intro-note">
-                        <div class="dashboard-note-label">Status</div>
-                        <p>Analysis complete. You can now redline findings or upload a new agreement.</p>
-                        <button class="btn btn-primary btn-small" id="header-insights-upload"
-                            style="margin-top:1rem">Scan new document</button>
-                    </div>
+
                     <div class="dashboard-shell reveal reveal-delay-2">
                         <div class="discovery-hero">
                             <div class="discovery-main glass-card">
@@ -290,23 +282,15 @@
                                             14 Standard Clauses
                                         </div>
                                     </div>
+                                    <div class="discovery-actions">
+                                        <button class="btn btn-primary" id="save-to-vault">Save to Vault</button>
+                                        <button class="btn btn-secondary" data-screen="report">Generate Report</button>
+                                        <button class="btn btn-ghost" id="insights-scan-trigger">Scan another</button>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="discovery-side">
-                                <div class="bottom-line-card glass-card">
-                                    <div class="eyebrow">Bottom Line</div>
-                                    <p>SIGNING AS-IS: You are accepting <strong>300% more</strong> financial liability
-                                        than typical market standards.</p>
-                                    <button class="btn btn-secondary btn-full" id="insights-scan-trigger">Scan
-                                        another</button>
-                                </div>
-                                <div class="action-card-mini reveal reveal-delay-3">
-                                    <button class="btn btn-primary btn-full" id="save-to-vault">Save to Vault</button>
-                                    <button class="btn btn-secondary btn-full" data-screen="report">Generate
-                                        Report</button>
-                                </div>
-                            </div>
+
                         </div>
                     </div>
 
@@ -391,6 +375,8 @@
                             <button class="text-link" data-screen="clause">View full clause</button>
                         </article>
                     </section>
+                </div>
+            </div>
         </section>
 
         <section class="screen" id="screen-security" data-screen="security">
@@ -545,7 +531,6 @@
                 </div>
                 <div class="vault-actions">
                     <button class="btn btn-secondary" data-modal="compare">Compare documents</button>
-                    <button class="btn btn-primary" id="vault-scan-trigger">Scan new document</button>
                 </div>
             </div>
 
