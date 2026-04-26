@@ -532,43 +532,40 @@
                     <h2>Decision report</h2>
                 </div>
                 <div class="report-buttons">
-                    <button class="btn btn-secondary" id="copy-report-link">Copy link</button>
-                    <button class="btn btn-secondary" id="download-pdf">Download PDF</button>
+                    <button class="btn btn-secondary" id="copy-report-text">Copy report</button>
+                    <button class="btn btn-secondary" id="download-pdf">Download Report</button>
                     <button class="btn btn-primary" data-modal="lawyer">Send to lawyer</button>
                 </div>
             </div>
 
-            <div class="report-sheet reveal reveal-delay-2">
+            <div class="report-sheet reveal reveal-delay-2" id="report-sheet-content">
                 <div class="report-sheet-header">
                     <div>
                         <div class="eyebrow">Legal analysis report</div>
-                        <h3>Commercial Lease Agreement v2</h3>
-                        <p>Generated from the current document state. Replace this mock with backend report data when
-                            the analysis API is connected.</p>
+                        <h3 id="report-title">Commercial Lease Agreement v2</h3>
+                        <p id="report-subtitle">Generated from the current document state.</p>
                     </div>
                     <div class="mini-score">
-                        <div class="mini-score-number">75</div>
-                        <div class="mini-score-label">High risk</div>
+                        <div class="mini-score-number" id="report-score-number">75</div>
+                        <div class="mini-score-label" id="report-score-label">High risk</div>
                     </div>
                 </div>
 
                 <div class="report-grid">
-                    <div class="report-block">
+                    <div class="report-block full">
                         <h4>Executive summary</h4>
-                        <p>This document contains three clauses that materially change the risk profile of the
-                            agreement: uncapped liability, accelerated termination, and aggressive cost escalation.</p>
-                    </div>
-                    <div class="report-block">
-                        <h4>Top recommendation</h4>
-                        <p>Negotiate a liability cap, extend termination notice, and tie escalators to a market-normal
-                            benchmark before signing.</p>
+                        <p id="report-summary">This document contains three clauses...</p>
                     </div>
                     <div class="report-block full">
-                        <h4>Findings snapshot</h4>
-                        <ul class="report-list">
+                        <h4>Findings snapshot (<span id="report-total-flags">0</span>)</h4>
+                        <ul class="report-list" id="report-clauses">
                             <li>Critical: liability recovery window is unusually narrow</li>
-                            <li>Warning: termination can happen with only 24 hours notice</li>
-                            <li>Warning: annual cost escalation exceeds typical lease growth</li>
+                        </ul>
+                    </div>
+                    <div class="report-block full">
+                        <h4>Processing Metadata</h4>
+                        <ul class="report-list" id="report-metadata">
+                            <li>OCR Mode: pdf_text_extraction</li>
                         </ul>
                     </div>
                 </div>

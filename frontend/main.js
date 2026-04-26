@@ -6,6 +6,7 @@ const state = {
   zoom: 100,
   scoreAnimated: false,
   isProcessing: false,
+  lastAnalysisData: null,
 };
 
 let clauses = [];
@@ -72,11 +73,11 @@ const modalContent = {
     body: `
       <p>Package the executive summary, top findings, and document anchors into a handoff your teammate can later connect to email or secure report delivery.</p>
       <div class="report-grid" style="margin-top:1rem">
-        <div class="report-block">
+        <div class="report-block action-block" id="modal-email-report" style="cursor:pointer">
           <h4>Email secure report</h4>
-          <p>Send the analysis and source-linked findings to counsel.</p>
+          <p>Send the analysis and source-linked findings to counsel via email.</p>
         </div>
-        <div class="report-block">
+        <div class="report-block action-block" id="modal-copy-summary" style="cursor:pointer">
           <h4>Copy judge-ready summary</h4>
           <p>Short version optimized for a live demo or quick legal opinion request.</p>
         </div>
@@ -101,7 +102,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const cameraCapture = document.getElementById("camera-capture");
   const processingContinue = document.getElementById("processing-continue");
   const saveToVault = document.getElementById("save-to-vault");
-  const copyReportLink = document.getElementById("copy-report-link");
+  const copyReportText = document.getElementById("copy-report-text");
   const downloadPdf = document.getElementById("download-pdf");
   const nextClause = document.getElementById("next-clause");
   const brandHome = document.getElementById("brand-home");
@@ -224,6 +225,14 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function setScreen(name) {
+    if (name === "report") {
+      if (!state.lastAnalysisData) {
+        showToast("Please analyze a document first.");
+        return;
+      }
+      generateReport();
+    }
+
     const isNewScreen = state.currentScreen !== name;
     state.currentScreen = name;
 
@@ -244,6 +253,50 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         animateScore(state.score);
       }
+    }
+  }
+
+  function generateReport() {
+    const data = state.lastAnalysisData;
+    document.getElementById("report-title").textContent = state.uploadedFileName || "Document Analysis";
+    document.getElementById("report-score-number").textContent = data.risk_score_numeric;
+    document.getElementById("report-score-label").textContent = data.overall_risk_score;
+    
+    let summary = data.summary_plain_english || "No summary provided.";
+    if (data.flagged_clauses && data.flagged_clauses.length === 0) {
+      summary = "No risky clauses were detected. This does not replace professional legal advice, but no major red flags were found by Clarity.";
+    }
+    document.getElementById("report-summary").textContent = summary;
+    
+    document.getElementById("report-total-flags").textContent = data.flagged_clauses ? data.flagged_clauses.length : 0;
+    
+    const clausesList = document.getElementById("report-clauses");
+    clausesList.innerHTML = "";
+    if (data.flagged_clauses && data.flagged_clauses.length > 0) {
+      data.flagged_clauses.forEach(c => {
+        const li = document.createElement("li");
+        li.innerHTML = `<strong>${c.severity}: ${c.type}</strong><br><em>"${c.original_text}"</em><br>Meaning: ${c.translation || "N/A"} (${Math.round(c.confidence*100)}% confidence)`;
+        clausesList.appendChild(li);
+      });
+    } else {
+      const li = document.createElement("li");
+      li.textContent = "No flags detected.";
+      clausesList.appendChild(li);
+    }
+    
+    const metaList = document.getElementById("report-metadata");
+    metaList.innerHTML = "";
+    if (data.processing_metadata) {
+      const meta = data.processing_metadata;
+      metaList.innerHTML = `
+        <li>OCR Mode: ${meta.ocr_mode || "N/A"}</li>
+        <li>Model Source: ${meta.model_source || "N/A"}</li>
+        <li>Endpoint Mode: ${meta.endpoint_mode || "N/A"}</li>
+        <li>DistilBERT used: ${meta.used_distilbert}</li>
+        <li>Google Vision used: ${meta.used_google_vision}</li>
+        <li>Gemma used: ${meta.used_gemma}</li>
+        <li>Backboard used: ${meta.used_backboard}</li>
+      `;
     }
   }
 
@@ -293,7 +346,59 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  function generateReportText() {
+    const data = state.lastAnalysisData;
+    if (!data) return "";
+    
+    let text = `Clarity Legal Analysis Report\n`;
+    text += `Document: ${state.uploadedFileName || "Document Analysis"}\n`;
+    text += `Risk Score: ${data.risk_score_numeric} (${data.overall_risk_score})\n\n`;
+    
+    let summary = data.summary_plain_english || "No summary provided.";
+    if (data.flagged_clauses && data.flagged_clauses.length === 0) {
+      summary = "No risky clauses were detected. This does not replace professional legal advice, but no major red flags were found by Clarity.";
+    }
+    text += `Executive Summary:\n${summary}\n\n`;
+    
+    text += `Findings Snapshot (${data.flagged_clauses ? data.flagged_clauses.length : 0}):\n`;
+    if (data.flagged_clauses && data.flagged_clauses.length > 0) {
+      data.flagged_clauses.forEach(c => {
+        text += `- ${c.severity}: ${c.type}\n`;
+        text += `  "${c.original_text}"\n`;
+        text += `  Meaning: ${c.translation || "N/A"} (${Math.round(c.confidence*100)}% confidence)\n\n`;
+      });
+    } else {
+      text += `- No flags detected.\n\n`;
+    }
+    
+    if (data.processing_metadata) {
+      text += `Processing Metadata:\n`;
+      const meta = data.processing_metadata;
+      text += `- OCR Mode: ${meta.ocr_mode || "N/A"}\n`;
+      text += `- Model Source: ${meta.model_source || "N/A"}\n`;
+      text += `- Endpoint Mode: ${meta.endpoint_mode || "N/A"}\n`;
+      text += `- DistilBERT used: ${meta.used_distilbert}\n`;
+      text += `- Google Vision used: ${meta.used_google_vision}\n`;
+    }
+    return text;
+  }
+
+  function generateJudgeSummary() {
+    const data = state.lastAnalysisData;
+    if (!data) return "";
+    const flaggedCount = data.flagged_clauses ? data.flagged_clauses.length : 0;
+    const criticalCount = data.flagged_clauses ? data.flagged_clauses.filter(c => c.severity === "CRITICAL").length : 0;
+    
+    let text = `CLARITY EXECUTIVE BRIEF\n`;
+    text += `Target: ${state.uploadedFileName}\n`;
+    text += `Verdict: ${data.overall_risk_score} (${data.risk_score_numeric}/100)\n`;
+    text += `Findings: ${flaggedCount} issues detected, including ${criticalCount} critical red flags.\n\n`;
+    text += `Summary: ${data.summary_plain_english || "Document analyzed with no major issues."}\n`;
+    return text;
+  }
+
   function mapApiResponse(data) {
+    state.lastAnalysisData = data;
     state.score = data.risk_score_numeric;
     state.riskLabel = data.overall_risk_score;
     
@@ -511,6 +616,28 @@ document.addEventListener("DOMContentLoaded", () => {
     modalShell.setAttribute("aria-hidden", "false");
 
     document.getElementById("modal-close")?.addEventListener("click", closeModal);
+    
+    if (key === "lawyer") {
+      document.getElementById("modal-email-report")?.addEventListener("click", () => {
+        const data = state.lastAnalysisData;
+        if (!data) {
+          showToast("No analysis to share.");
+          return;
+        }
+        const subject = encodeURIComponent(`Legal Risk Brief: ${state.uploadedFileName}`);
+        const body = encodeURIComponent(generateReportText());
+        window.location.href = `mailto:?subject=${subject}&body=${body}`;
+      });
+      
+      document.getElementById("modal-copy-summary")?.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(generateJudgeSummary());
+          showToast("Judge-ready summary copied.");
+        } catch {
+          showToast("Failed to copy summary.");
+        }
+      });
+    }
   }
 
   function closeModal() {
@@ -561,16 +688,39 @@ document.addEventListener("DOMContentLoaded", () => {
     setScreen("vault");
   });
 
-  copyReportLink.addEventListener("click", async () => {
+  copyReportText.addEventListener("click", async () => {
     try {
-      await navigator.clipboard.writeText(window.location.href);
-      showToast("Report link copied.");
+      const text = generateReportText();
+      if (!text) {
+        showToast("Please analyze a document first.");
+        return;
+      }
+      await navigator.clipboard.writeText(text);
+      showToast("Report copied to clipboard.");
     } catch {
-      showToast("Link ready to copy.");
+      showToast("Could not copy report.");
     }
   });
 
-  downloadPdf.addEventListener("click", () => showToast("PDF export hook ready for backend integration."));
+  downloadPdf.addEventListener("click", () => {
+    const text = generateReportText();
+    if (!text) {
+      showToast("Please analyze a document first.");
+      return;
+    }
+    
+    const blob = new Blob([text], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const safeName = (state.uploadedFileName || "report").replace(/\.[^/.]+$/, "");
+    a.href = url;
+    a.download = `${safeName}_report.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast("Report downloaded as .txt");
+  });
   nextClause.addEventListener("click", () => {
     state.clauseIndex = (state.clauseIndex + 1) % clauses.length;
     updateClauseContent();
