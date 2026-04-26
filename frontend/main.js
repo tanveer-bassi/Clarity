@@ -7,34 +7,7 @@ const state = {
   scoreAnimated: false,
 };
 
-const clauses = [
-  {
-    badge: "High risk flag",
-    title: "Liability limitation and indemnity",
-    subtitle: "Clause 14.2 — Terms of Service Agreement",
-    original:
-      "“The User hereby agrees to indemnify, defend, and hold harmless Clarity and its affiliates from any and all claims, losses, liabilities, and legal expenses arising from use of the service...”",
-    plain:
-      "If something tied to your use of the platform creates a dispute, you may end up paying the company’s legal costs and related losses.",
-    impacts: [
-      ["Financial exposure", "This clause can shift major legal costs onto you."],
-      ["Indefinite liability", "The obligation can survive even after the agreement ends."],
-    ],
-  },
-  {
-    badge: "Warning flag",
-    title: "Termination for convenience",
-    subtitle: "Clause 8.1 — Commercial Lease Addendum",
-    original:
-      "“Landlord may terminate this lease at its sole discretion upon twenty-four (24) hours written notice, without obligation to provide relocation support or reimbursement.”",
-    plain:
-      "The other party can end the agreement almost immediately, even if you did nothing wrong, and they do not need to help with the fallout.",
-    impacts: [
-      ["Operational risk", "Your business could lose access to the space with almost no notice."],
-      ["Negotiation gap", "There is no transition support or reimbursement built into the exit."],
-    ],
-  },
-];
+let clauses = [];
 
 const modalContent = {
   advisors: {
@@ -272,23 +245,147 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function simulateProcessing() {
-    processingTitle.textContent = "Building your decision brief";
-    processingStatus.textContent = "Scoring liability, arbitration, and waiver language.";
+  const API_BASE = import.meta.env?.VITE_API_BASE_URL || "http://localhost:8000";
+
+  async function callAnalyzeMock() {
+    const endpoint = `${API_BASE}/api/analyze/mock`;
+    console.log(`[Clarity] Calling mock endpoint: ${endpoint}`);
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const data = await response.json();
+      console.log("[Clarity] Mock response JSON:", data);
+      return data;
+    } catch (error) {
+      console.error("[Clarity] API call failed:", error);
+      throw error;
+    }
+  }
+
+  function mapApiResponse(data) {
+    state.score = data.risk_score_numeric;
+    
+    // Update headline based on overall score
+    const headline = document.getElementById("discovery-headline");
+    const summary = document.getElementById("discovery-summary");
+    
+    if (headline) {
+      headline.textContent = data.overall_risk_score === "CRITICAL" || data.overall_risk_score === "HIGH" 
+          ? "High-Risk Exposure Detected" 
+          : data.overall_risk_score === "MEDIUM" ? "Moderate Risk Detected" : "Low Risk Document";
+    }
+        
+    if (summary) {
+      summary.textContent = data.summary_plain_english || "No summary provided.";
+    }
+
+    const flaggedCount = data.flagged_clauses ? data.flagged_clauses.length : 0;
+    const criticalCount = data.flagged_clauses ? data.flagged_clauses.filter(c => c.severity === "CRITICAL").length : 0;
+    
+    const criticalFlagsCount = document.getElementById("critical-flags-count");
+    if (criticalFlagsCount) criticalFlagsCount.textContent = `${criticalCount} Critical Flags`;
+    
+    const criticalPill = document.getElementById("critical-flags-pill");
+    if (criticalPill) {
+        if (criticalCount > 0) {
+            criticalPill.classList.add("red", "active");
+        } else {
+            criticalPill.classList.remove("red", "active");
+        }
+    }
+    
+    const standardClausesCount = document.getElementById("standard-clauses-count");
+    if (standardClausesCount) standardClausesCount.textContent = `${flaggedCount} Total Flags`;
+
+    const findingsGrid = document.getElementById("findings-grid");
+    if (findingsGrid && data.flagged_clauses) {
+        findingsGrid.innerHTML = "";
+        
+        data.flagged_clauses.slice(0, 4).forEach((clause, i) => {
+            const article = document.createElement("article");
+            article.className = `finding-card reveal reveal-delay-${i + 1}`;
+            
+            let riskClass = "caution";
+            if (clause.severity === "CRITICAL") riskClass = "critical";
+            else if (clause.severity === "HIGH") riskClass = "warning";
+            
+            if (i === 0 && clause.severity === "CRITICAL") article.classList.add("finding-card-featured", "risk-critical");
+            else article.classList.add(`risk-${riskClass}`);
+            
+            const typeFormat = clause.type.replace(/_/g, " ");
+            const typeCap = typeFormat.charAt(0) + typeFormat.slice(1).toLowerCase();
+            
+            article.innerHTML = `
+                <div class="finding-head">
+                    <span class="risk-badge ${riskClass}">${clause.severity.charAt(0) + clause.severity.slice(1).toLowerCase()}</span>
+                    <span class="finding-icon" aria-hidden="true">${Math.round(clause.confidence * 100)}%</span>
+                </div>
+                <div class="finding-copy">
+                    <h3>${typeCap}</h3>
+                    <p class="finding-summary"><strong>Plain English:</strong> ${clause.translation || clause.original_text}</p>
+                </div>
+                <div class="legal-box">“${clause.original_text}”</div>
+                <button class="text-link" data-screen="clause">View full clause</button>
+            `;
+            
+            findingsGrid.appendChild(article);
+        });
+        
+        revealOnScroll();
+    }
+    
+    clauses.length = 0;
+    if (data.flagged_clauses) {
+        data.flagged_clauses.forEach(c => {
+            const typeFormat = c.type.replace(/_/g, " ");
+            clauses.push({
+                badge: c.severity,
+                title: typeFormat.charAt(0) + typeFormat.slice(1).toLowerCase(),
+                subtitle: state.uploadedFileName,
+                original: `“${c.original_text}”`,
+                plain: c.translation || c.original_text,
+                impacts: [
+                    ["Risk level", `Severity: ${c.severity}. Confidence: ${Math.round(c.confidence * 100)}%.`],
+                    ["Detected by", c.source === "distilbert" ? "Custom DistilBERT model trained on legal contracts." : "Deterministic rule-based classifier."]
+                ]
+            });
+        });
+    }
+    if (clauses.length === 0) {
+        clauses.push({
+            badge: "All clear", title: "No high-risk clauses found", subtitle: state.uploadedFileName, original: "“No flagged clauses were detected in this document.”", plain: "This document appears to carry low overall risk.", impacts: [["Result", "No significant risk clauses were identified."], ["Recommendation", "Review manually for any domain-specific concerns."]]
+        });
+    }
+    state.clauseIndex = 0;
+  }
+
+  async function simulateProcessing() {
+    processingTitle.textContent = "Analyzing your document";
+    processingStatus.textContent = "Connecting to backend and scoring risk...";
     setScreen("processing");
 
-    window.setTimeout(() => {
-      processingStatus.textContent = "High-risk clauses detected. Drafting plain-English summary.";
-    }, 1400);
+    try {
+        const data = await callAnalyzeMock();
+        
+        processingStatus.textContent = "Drafting plain-English summary...";
+        await new Promise(resolve => setTimeout(resolve, 800));
 
-    window.setTimeout(() => {
-      processingStatus.textContent = "Decision brief ready. Opening your results.";
-      animateScore(state.score);
-    }, 2800);
-
-    window.setTimeout(() => {
-      setScreen("dashboard");
-    }, 3600);
+        mapApiResponse(data);
+        
+        processingStatus.textContent = "Decision brief ready. Opening your results.";
+        await new Promise(resolve => setTimeout(resolve, 400));
+        
+        setScreen("dashboard");
+    } catch (error) {
+        console.error(error);
+        processingStatus.textContent = "Analysis failed. Please try again or check backend.";
+        showToast("Error connecting to backend");
+        setTimeout(() => setScreen("landing"), 3000);
+    }
   }
 
   function handleFile(file) {

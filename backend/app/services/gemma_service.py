@@ -56,7 +56,8 @@ FALLBACK_SUMMARY_TEMPLATE = (
 
 
 def _gemini_available() -> bool:
-    return bool(os.getenv("GEMINI_API_KEY"))
+    key = os.getenv("GEMINI_API_KEY", "")
+    return bool(key and not key.startswith("your-"))
 
 
 # ---------------------------------------------------------------------------

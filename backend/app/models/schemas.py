@@ -32,6 +32,10 @@ class ProcessingMetadata(BaseModel):
     used_backboard: bool = False
     used_dcp: bool = False
     processing_time_ms: int = 0
+    ocr_mode: Optional[str] = None
+    model_source: Optional[str] = None
+    endpoint_mode: Optional[str] = None
+    extracted_text_preview: Optional[str] = None
 
 
 class DCPMetrics(BaseModel):
