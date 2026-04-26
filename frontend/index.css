@@ -3096,8 +3096,343 @@ h4 {
   }
 
   .discovery-main {
+/* High-Impact Section Dividers */
+.section-divider {
+  width: 100%;
+  max-width: 1200px;
+  margin: 4rem auto 1rem;
+  display: flex;
+  align-items: center;
+  gap: 3rem;
+  padding: 0 2rem;
+}
+
+.section-divider::before,
+.section-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, transparent, var(--cluely-blue), transparent);
+  opacity: 0.2;
+}
+
+.divider-text {
+  font-size: 3.5rem;
+  font-weight: 300;
+  font-family: var(--font-serif);
+  color: #000000;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+}
+
+.how-it-works {
+  padding: 2rem 0 4rem;
+  margin: 0;
+}
+
+/* Modern Insights Layout */
+.dashboard-shell {
+  margin: 2rem 0 5rem;
+}
+
+.discovery-hero {
+  display: block;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.discovery-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 3rem;
+  padding: 5rem !important;
+}
+
+.discovery-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.discovery-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1.2rem;
+  margin-top: 3rem;
+}
+
+.discovery-tags {
+  justify-content: center;
+}
+
+.discovery-main {
+  padding: 4rem !important;
+  display: flex;
+  gap: 4rem;
+  align-items: center;
+}
+
+.discovery-score {
+  flex-shrink: 0;
+}
+
+.discovery-copy h2 {
+  font-size: 3.2rem;
+  font-family: var(--font-serif);
+  font-weight: 400;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+.discovery-copy p {
+  font-size: 1.25rem;
+  line-height: 1.8;
+  color: var(--cluely-text-soft);
+  max-width: 45ch;
+  margin-bottom: 2.5rem;
+}
+
+.action-card-mini {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1rem !important;
+  margin-top: 1.5rem;
+}
+
+.discovery-tags {
+  display: flex;
+  gap: 1rem;
+}
+
+.discovery-tag-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 1.4rem;
+  background: var(--cluely-blue-soft);
+  border-radius: 100px;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--cluely-blue);
+  letter-spacing: 0.02em;
+}
+
+.discovery-tag-pill.active.red {
+  background: rgba(220, 38, 38, 0.08);
+  color: #dc2626;
+}
+
+.discovery-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.bottom-line-card {
+  padding: 2.5rem !important;
+  flex: 1;
+}
+
+.bottom-line-card p {
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin-bottom: 2rem;
+}
+
+.btn-full {
+  width: 100%;
+}
+
+.dashboard-divider {
+  height: 1px;
+  background: var(--cluely-border);
+  margin: 4rem 0;
+  opacity: 0.5;
+}
+
+.section-header-compact {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(280px, 0.7fr);
+  align-items: end;
+  gap: 2.5rem;
+  margin-bottom: 3.5rem;
+  max-width: 980px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.section-title-group h3 {
+  font-size: 2.5rem;
+  font-family: var(--font-serif);
+  font-weight: 400;
+  margin-top: 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+.section-header-compact p {
+  max-width: 32ch;
+  color: var(--cluely-text-soft);
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+}
+
+@media (max-width: 1100px) {
+  .section-header-compact {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .discovery-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .discovery-main {
     flex-direction: column;
     text-align: center;
     gap: 2rem;
   }
+}
+/* Processing Screen Redesign */
+.processing-container {
+    max-width: 1100px;
+    margin: 6rem auto;
+    text-align: center;
+    padding: 0 2rem;
+}
+
+.processing-header {
+    margin-bottom: 4rem;
+}
+
+.processing-file-display {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: var(--cluely-text-soft);
+    margin-bottom: 0.8rem;
+}
+
+.processing-main-title {
+    font-size: clamp(2.5rem, 6vw, 4rem);
+    font-family: var(--font-serif);
+    font-weight: 300;
+    letter-spacing: -0.03em;
+    color: var(--cluely-text);
+}
+
+.process-steps-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1.25rem;
+    margin-bottom: 4rem;
+}
+
+.process-step-card {
+    background: #ffffff;
+    border: 1px solid var(--cluely-border);
+    border-radius: 24px;
+    padding: 2.5rem 1.5rem;
+    text-align: center;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.25rem;
+    opacity: 0.4;
+    filter: grayscale(1);
+    box-shadow: var(--shadow-sm);
+}
+
+.process-step-card.is-complete {
+    opacity: 1;
+    filter: grayscale(0);
+    border-color: rgba(59, 130, 246, 0.3);
+    background: rgba(59, 130, 246, 0.03);
+}
+
+.process-step-card.is-active {
+    opacity: 1;
+    filter: grayscale(0);
+    border-color: var(--cluely-blue);
+    background: #ffffff;
+    box-shadow: 0 20px 50px rgba(59, 130, 246, 0.12);
+    transform: translateY(-8px);
+}
+
+.step-badge {
+    width: 3.5rem;
+    height: 3.5rem;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--cluely-text-soft);
+    transition: all 0.3s ease;
+}
+
+.step-badge .material-symbols-rounded {
+    font-size: 1.75rem;
+}
+
+.process-step-card.is-complete .step-badge {
+    background: var(--cluely-blue-soft);
+    color: var(--cluely-blue);
+}
+
+.process-step-card.is-active .step-badge {
+    background: var(--cluely-blue);
+    color: #ffffff;
+    animation: step-pulse 2s infinite;
+}
+
+.step-info h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--cluely-text);
+    letter-spacing: -0.01em;
+}
+
+.step-info p {
+    font-size: 0.85rem;
+    color: var(--cluely-text-soft);
+    line-height: 1.5;
+    max-width: 18ch;
+}
+
+.process-step-card.is-active .step-info p {
+    color: var(--cluely-text);
+}
+
+.processing-footer-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+}
+
+@keyframes step-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+    70% { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+@media (max-width: 1024px) {
+    .process-steps-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .process-steps-grid {
+        grid-template-columns: 1fr;
+        max-width: 400px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    .processing-container {
+        margin: 3rem auto;
+    }
 }

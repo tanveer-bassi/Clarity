@@ -81,6 +81,11 @@ class HistoryItem(BaseModel):
     risk_score_numeric: int
     flagged_count: int
     scanned_at: str  # ISO-8601 timestamp
+    
+    # Full analysis fields for detail view
+    summary_plain_english: Optional[str] = None
+    flagged_clauses: Optional[List[FlaggedClause]] = None
+    processing_metadata: Optional[ProcessingMetadata] = None
 
 
 class HistoryResponse(BaseModel):

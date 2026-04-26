@@ -7,6 +7,7 @@ const state = {
   scoreAnimated: false,
   isProcessing: false,
   lastAnalysisData: null,
+  vaultHistory: [],
 };
 
 let clauses = [];
@@ -254,17 +255,26 @@ document.addEventListener("DOMContentLoaded", () => {
         animateScore(state.score);
       }
     }
+
+    if (name === "vault") {
+      loadVaultHistory();
+    }
   }
 
   function generateReport() {
     const data = state.lastAnalysisData;
+    console.log("[Clarity] generateReport using object:", data);
     document.getElementById("report-title").textContent = state.uploadedFileName || "Document Analysis";
     document.getElementById("report-score-number").textContent = data.risk_score_numeric;
     document.getElementById("report-score-label").textContent = data.overall_risk_score;
     
-    let summary = data.summary_plain_english || "No summary provided.";
-    if (data.flagged_clauses && data.flagged_clauses.length === 0) {
-      summary = "No risky clauses were detected. This does not replace professional legal advice, but no major red flags were found by Clarity.";
+    let summary = data.summary_plain_english;
+    if (!summary) {
+      if (data.risk_score_numeric >= 70) {
+        summary = "CRITICAL ADVISORY: This document contains significant legal risks. While the detailed summary is unavailable for this specific historical record, the high risk score suggests extreme caution is required.";
+      } else {
+        summary = "Detailed plain-English summary is unavailable for this historical record.";
+      }
     }
     document.getElementById("report-summary").textContent = summary;
     
@@ -343,6 +353,91 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       console.error("[Clarity] Real API call failed:", error);
       throw error;
+    }
+  }
+
+  async function loadVaultHistory() {
+    const endpoint = `${API_BASE}/api/history/demo_user`;
+    const container = document.getElementById("vault-list-container");
+    if (!container) return;
+
+    console.log(`[Clarity] Fetching vault history: ${endpoint}`);
+    
+    try {
+      const response = await fetch(endpoint);
+      if (!response.ok) throw new Error("Could not load vault history.");
+      
+      const data = await response.json();
+      console.log("[Clarity] Vault history response:", data);
+      
+      const documents = data.documents || [];
+      state.vaultHistory = documents;
+
+      // Update Stats
+      const processedCount = documents.length;
+      const highRiskCount = documents.filter(d => 
+        d.overall_risk_score === "HIGH" || 
+        d.overall_risk_score === "CRITICAL" || 
+        d.risk_score_numeric >= 70
+      ).length;
+      const avgScore = processedCount > 0 
+        ? Math.round(documents.reduce((acc, d) => acc + (d.risk_score_numeric || 0), 0) / processedCount) 
+        : 0;
+
+      const statProcessed = document.getElementById("vault-stat-processed");
+      const statHighRisk = document.getElementById("vault-stat-high-risk");
+      const statAvgScore = document.getElementById("vault-stat-avg-score");
+
+      if (statProcessed) statProcessed.textContent = processedCount;
+      if (statHighRisk) statHighRisk.textContent = highRiskCount.toString().padStart(2, '0');
+      if (statAvgScore) statAvgScore.textContent = `${avgScore}%`;
+      
+      if (documents.length === 0) {
+        container.innerHTML = `
+          <div class="empty-vault reveal">
+            <p>No saved documents yet. Scan a document to add it to your vault.</p>
+          </div>
+        `;
+        revealScreen(container);
+        return;
+      }
+
+      // Populate list
+      container.innerHTML = documents.map((doc, idx) => {
+        const date = doc.scanned_at ? new Date(doc.scanned_at).toLocaleDateString() : "Recent";
+        const riskClass = doc.overall_risk_score.toLowerCase();
+        const delay = idx > 0 ? `reveal-delay-${idx + 1}` : "";
+        
+        return `
+          <article class="vault-item glass-card reveal ${delay}">
+            <div class="vault-item-top">
+              <div class="eyebrow vault-kicker">${idx === 0 ? "Latest scan" : "History"}</div>
+              <div class="vault-score-badge ${riskClass}">
+                <span class="vault-score-number">${doc.risk_score_numeric}</span>
+                <span class="vault-score-copy">${doc.overall_risk_score}</span>
+              </div>
+            </div>
+            <div class="vault-info">
+              <div class="vault-title">${doc.filename || doc.document_id}</div>
+              <div class="vault-meta">Scanned on ${date}</div>
+              <p class="vault-summary">This document was analyzed with ${doc.flagged_count} flagged clauses.</p>
+            </div>
+            <div class="vault-buttons">
+              <button class="btn btn-secondary view-vault-details" data-id="${doc.document_id}">View Details</button>
+            </div>
+          </article>
+        `;
+      }).join("");
+
+      revealOnScroll();
+    } catch (error) {
+      console.error("[Clarity] Vault load error:", error);
+      container.innerHTML = `
+        <div class="error-vault reveal">
+          <p>Could not load your vault. Please try again later.</p>
+        </div>
+      `;
+      revealScreen(container);
     }
   }
 
@@ -563,6 +658,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     try {
         const data = await callAnalyzeReal(file);
+        console.log("[Clarity] POST /api/analyze response full keys:", Object.keys(data));
         
         processingStatus.textContent = "Drafting plain-English summary...";
         // artificial delay to let user read the status message
@@ -650,12 +746,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Event Delegation for Navigation and UI Triggers
   document.addEventListener("click", (event) => {
-    const target = event.target.closest("[data-screen], [data-modal], [data-toast]");
+    const target = event.target.closest("[data-screen], [data-modal], [data-toast], .view-vault-details");
     if (!target) return;
 
     if (target.dataset.screen) setScreen(target.dataset.screen);
     if (target.dataset.modal) openModal(target.dataset.modal);
     if (target.dataset.toast) showToast(target.dataset.toast);
+
+    if (target.classList.contains("view-vault-details")) {
+      const docId = target.dataset.id;
+      console.log(`[Clarity] Vault detail clicked: ${docId}`);
+      const doc = state.vaultHistory.find(d => d.document_id === docId);
+      console.log("[Clarity] Vault detail selected item:", doc);
+      if (doc) {
+        state.lastAnalysisData = doc;
+        console.log("[Clarity] Normalized vault detail object:", state.lastAnalysisData);
+        state.uploadedFileName = doc.filename || "Saved Analysis";
+        setScreen("report");
+      }
+    }
   });
 
   const headerScanTrigger = document.getElementById("header-scan-trigger");
@@ -686,7 +795,7 @@ document.addEventListener("DOMContentLoaded", () => {
   fileInput.addEventListener("change", (event) => handleFile(event.target.files?.[0]));
   processingContinue.addEventListener("click", () => setScreen("dashboard"));
   saveToVault.addEventListener("click", () => {
-    showToast("Analysis saved to Clarity Vault.");
+    showToast("Analysis saved available in Vault.");
     setScreen("vault");
   });
 

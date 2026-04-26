@@ -155,9 +155,13 @@ async def analyze_document(
     # --- Step 8: Save to vault ---
     analysis_dict = response.model_dump()
     analysis_dict["filename"] = file.filename or "Uploaded Document"
+    
     _, used_backboard = await backboard_service.save_document_analysis(
-        user_id or "demo_user", analysis_dict
+        user_id or "demo_user", 
+        analysis_dict
     )
+    
+    # Update the live response object with the final backboard status
     response.processing_metadata.used_backboard = used_backboard
 
     return response
