@@ -1,5 +1,5 @@
 const state = {
-  currentScreen: "landing",
+  currentScreen: "",
   uploadedFileName: "Hospital_Consent_Form.pdf",
   score: 75,
   clauseIndex: 0,
@@ -99,6 +99,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const processingStatus = document.getElementById("processing-status");
   const processingTitle = document.getElementById("processing-title");
   const processingFileName = document.getElementById("processing-file-name");
+  const processingSteps = [...document.querySelectorAll(".process-step-card")];
   const landingUpload = document.getElementById("landing-upload");
   const cameraUpload = document.getElementById("camera-upload");
   const cameraCapture = document.getElementById("camera-capture");
@@ -128,6 +129,30 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast.timer = window.setTimeout(() => {
       toast.classList.remove("is-visible");
     }, 2200);
+  }
+
+  function updateProcessingStepState({ active, completed = [], failed = null, statusText = null }) {
+    processingSteps.forEach((stepCard) => {
+      const isCompleted = completed.includes(stepCard.dataset.step);
+      const isActive = stepCard.dataset.step === active;
+      const isFailed = stepCard.dataset.step === failed;
+
+      stepCard.classList.toggle("is-complete", isCompleted);
+      stepCard.classList.toggle("is-active", isActive && !isFailed);
+      stepCard.classList.toggle("is-error", isFailed);
+    });
+
+    if (statusText !== null) {
+      processingStatus.textContent = statusText;
+    }
+  }
+
+  function resetProcessingState() {
+    updateProcessingStepState({
+      active: "clauses",
+      completed: ["layout", "text"],
+      statusText: "Connecting to backend and scoring risk...",
+    });
   }
 
   let scrollObserver;
@@ -222,16 +247,22 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function updateClauseContent() {
+    if (!clauses || clauses.length === 0) return;
     const current = clauses[state.clauseIndex];
-    document.getElementById("clause-badge").textContent = current.badge;
-    document.getElementById("clause-title").textContent = current.title;
-    document.getElementById("clause-subtitle").textContent = current.subtitle;
-    document.getElementById("clause-original").textContent = current.original;
-    document.getElementById("clause-plain").textContent = current.plain;
-    document.getElementById("impact-title-1").textContent = current.impacts[0][0];
-    document.getElementById("impact-copy-1").textContent = current.impacts[0][1];
-    document.getElementById("impact-title-2").textContent = current.impacts[1][0];
-    document.getElementById("impact-copy-2").textContent = current.impacts[1][1];
+    if (!current) return;
+
+    document.getElementById("clause-badge").textContent = current.badge || "Flag";
+    document.getElementById("clause-title").textContent = current.title || "Clause";
+    document.getElementById("clause-subtitle").textContent = current.subtitle || "";
+    document.getElementById("clause-original").textContent = current.original || "";
+    document.getElementById("clause-plain").textContent = current.plain || "";
+
+    if (current.impacts && current.impacts.length >= 2) {
+      document.getElementById("impact-title-1").textContent = current.impacts[0][0];
+      document.getElementById("impact-copy-1").textContent = current.impacts[0][1];
+      document.getElementById("impact-title-2").textContent = current.impacts[1][0];
+      document.getElementById("impact-copy-2").textContent = current.impacts[1][1];
+    }
   }
 
   function setScreen(name) {
@@ -276,7 +307,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("report-title").textContent = state.uploadedFileName || "Document Analysis";
     document.getElementById("report-score-number").textContent = data.risk_score_numeric;
     document.getElementById("report-score-label").textContent = data.overall_risk_score;
-    
+
     let summary = data.summary_plain_english;
     if (!summary) {
       if (data.risk_score_numeric >= 70) {
@@ -286,32 +317,32 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
     document.getElementById("report-summary").textContent = summary;
-    
+
     // DCP Metrics
     const dcpContainer = document.getElementById("report-dcp-container");
     if (data.dcp_metrics && data.processing_metadata && (data.processing_metadata.used_dcp || data.processing_metadata.dcp_mode)) {
       const dcp = data.dcp_metrics;
       const meta = data.processing_metadata;
-      
+
       dcpContainer.style.display = "block";
       document.getElementById("report-dcp-pages").textContent = dcp.pages_processed;
       document.getElementById("report-dcp-seq").textContent = `${(dcp.sequential_time_ms / 1000).toFixed(1)}s`;
       document.getElementById("report-dcp-para").textContent = `${(dcp.dcp_parallel_time_ms / 1000).toFixed(1)}s`;
       document.getElementById("report-dcp-speedup").textContent = `${dcp.speedup_factor}x`;
-      
+
       document.getElementById("report-dcp-title").textContent = "DCP Parallel Acceleration";
     } else {
       dcpContainer.style.display = "none";
     }
-    
+
     document.getElementById("report-total-flags").textContent = data.flagged_clauses ? data.flagged_clauses.length : 0;
-    
+
     const clausesList = document.getElementById("report-clauses");
     clausesList.innerHTML = "";
     if (data.flagged_clauses && data.flagged_clauses.length > 0) {
       data.flagged_clauses.forEach(c => {
         const li = document.createElement("li");
-        li.innerHTML = `<strong>${c.severity}: ${c.type}</strong><br><em>"${c.original_text}"</em><br>Meaning: ${c.translation || "N/A"} (${Math.round(c.confidence*100)}% confidence)`;
+        li.innerHTML = `<strong>${c.severity}: ${c.type}</strong><br><em>"${c.original_text}"</em><br>Meaning: ${c.translation || "N/A"} (${Math.round(c.confidence * 100)}% confidence)`;
         clausesList.appendChild(li);
       });
     } else {
@@ -319,7 +350,7 @@ document.addEventListener("DOMContentLoaded", () => {
       li.textContent = "No flags detected.";
       clausesList.appendChild(li);
     }
-    
+
     const metaList = document.getElementById("report-metadata");
     metaList.innerHTML = "";
     if (data.processing_metadata) {
@@ -335,7 +366,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <li>DCP used: ${meta.used_dcp}</li>
         <li>DCP mode: ${meta.dcp_mode || "off"}</li>
       `;
-      
+
       if (data.dcp_metrics) {
         const dcp = data.dcp_metrics;
         metaList.innerHTML += `
@@ -398,14 +429,14 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!container) return;
 
     console.log(`[Clarity] Fetching vault history: ${endpoint}`);
-    
+
     try {
       const response = await fetch(endpoint);
       if (!response.ok) throw new Error("Could not load vault history.");
-      
+
       const data = await response.json();
       console.log("[Clarity] Vault history response:", data);
-      
+
       // Sort by scanned_at descending (newest first)
       const documents = (data.documents || []).sort((a, b) => {
         const dateA = a.scanned_at ? new Date(a.scanned_at) : 0;
@@ -416,13 +447,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Update Stats
       const processedCount = documents.length;
-      const highRiskCount = documents.filter(d => 
-        d.overall_risk_score === "HIGH" || 
-        d.overall_risk_score === "CRITICAL" || 
+      const highRiskCount = documents.filter(d =>
+        d.overall_risk_score === "HIGH" ||
+        d.overall_risk_score === "CRITICAL" ||
         d.risk_score_numeric >= 70
       ).length;
-      const avgScore = processedCount > 0 
-        ? Math.round(documents.reduce((acc, d) => acc + (d.risk_score_numeric || 0), 0) / processedCount) 
+      const avgScore = processedCount > 0
+        ? Math.round(documents.reduce((acc, d) => acc + (d.risk_score_numeric || 0), 0) / processedCount)
         : 0;
 
       const statProcessed = document.getElementById("vault-stat-processed");
@@ -430,9 +461,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const statAvgScore = document.getElementById("vault-stat-avg-score");
 
       if (statProcessed) statProcessed.textContent = processedCount;
-      if (statHighRisk) statHighRisk.textContent = highRiskCount.toString().padStart(2, '0');
+      if (statHighRisk) {
+        statHighRisk.textContent = highRiskCount === 0
+          ? "0"
+          : highRiskCount.toString().padStart(2, "0");
+      }
       if (statAvgScore) statAvgScore.textContent = `${avgScore}%`;
-      
+
       if (documents.length === 0) {
         container.innerHTML = `
           <div class="empty-vault reveal">
@@ -448,7 +483,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const date = doc.scanned_at ? new Date(doc.scanned_at).toLocaleDateString() : "Recent";
         const riskClass = doc.overall_risk_score.toLowerCase();
         const delay = idx > 0 ? `reveal-delay-${idx + 1}` : "";
-        
+
         return `
           <article class="vault-item glass-card reveal ${delay}">
             <div class="vault-item-top">
@@ -485,28 +520,28 @@ document.addEventListener("DOMContentLoaded", () => {
   function generateReportText() {
     const data = state.lastAnalysisData;
     if (!data) return "";
-    
+
     let text = `Clarity Legal Analysis Report\n`;
     text += `Document: ${state.uploadedFileName || "Document Analysis"}\n`;
     text += `Risk Score: ${data.risk_score_numeric} (${data.overall_risk_score})\n\n`;
-    
+
     let summary = data.summary_plain_english || "No summary provided.";
     if (data.flagged_clauses && data.flagged_clauses.length === 0) {
       summary = "No risky clauses were detected. This does not replace professional legal advice, but no major red flags were found by Clarity.";
     }
     text += `Executive Summary:\n${summary}\n\n`;
-    
+
     text += `Findings Snapshot (${data.flagged_clauses ? data.flagged_clauses.length : 0}):\n`;
     if (data.flagged_clauses && data.flagged_clauses.length > 0) {
       data.flagged_clauses.forEach(c => {
         text += `- ${c.severity}: ${c.type}\n`;
         text += `  "${c.original_text}"\n`;
-        text += `  Meaning: ${c.translation || "N/A"} (${Math.round(c.confidence*100)}% confidence)\n\n`;
+        text += `  Meaning: ${c.translation || "N/A"} (${Math.round(c.confidence * 100)}% confidence)\n\n`;
       });
     } else {
       text += `- No flags detected.\n\n`;
     }
-    
+
     if (data.processing_metadata) {
       text += `Processing Metadata:\n`;
       const meta = data.processing_metadata;
@@ -519,7 +554,7 @@ document.addEventListener("DOMContentLoaded", () => {
       text += `- Backboard used: ${meta.used_backboard}\n`;
       text += `- DCP used: ${meta.used_dcp}\n`;
       text += `- DCP mode: ${meta.dcp_mode || "off"}\n`;
-      
+
       if (data.dcp_metrics) {
         const dcp = data.dcp_metrics;
         text += `- DCP Pages: ${dcp.pages_processed}\n`;
@@ -539,7 +574,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!data) return "";
     const flaggedCount = data.flagged_clauses ? data.flagged_clauses.length : 0;
     const criticalCount = data.flagged_clauses ? data.flagged_clauses.filter(c => c.severity === "CRITICAL").length : 0;
-    
+
     let text = `CLARITY EXECUTIVE BRIEF\n`;
     text += `Target: ${state.uploadedFileName}\n`;
     text += `Verdict: ${data.overall_risk_score} (${data.risk_score_numeric}/100)\n`;
@@ -552,71 +587,71 @@ document.addEventListener("DOMContentLoaded", () => {
     state.lastAnalysisData = data;
     state.score = data.risk_score_numeric;
     state.riskLabel = data.overall_risk_score;
-    
+
     console.log("[Clarity DEBUG] raw response JSON:", data);
     console.log("[Clarity DEBUG] parsed risk_score_numeric:", state.score);
     console.log("[Clarity DEBUG] rendered score value (target):", state.score);
     console.log("[Clarity DEBUG] overall_risk_score:", state.riskLabel);
     console.log("[Clarity DEBUG] flagged_clauses.length:", data.flagged_clauses ? data.flagged_clauses.length : 0);
-    
+
     // Update headline based on overall score
     const headline = document.getElementById("discovery-headline");
     const summary = document.getElementById("discovery-summary");
-    
+
     if (headline) {
       if (data.overall_risk_score === "CRITICAL") {
-          headline.textContent = "Critical Risk Detected";
+        headline.textContent = "Critical Risk Detected";
       } else if (data.overall_risk_score === "HIGH") {
-          headline.textContent = "High-Risk Exposure Detected";
+        headline.textContent = "High-Risk Exposure Detected";
       } else if (data.overall_risk_score === "MEDIUM") {
-          headline.textContent = "Moderate Risk Detected";
+        headline.textContent = "Moderate Risk Detected";
       } else {
-          headline.textContent = "Low Risk / No Major Issues Detected";
+        headline.textContent = "Low Risk / No Major Issues Detected";
       }
     }
-        
+
     if (summary) {
       summary.textContent = data.summary_plain_english || "No summary provided.";
     }
 
     const flaggedCount = data.flagged_clauses ? data.flagged_clauses.length : 0;
     const criticalCount = data.flagged_clauses ? data.flagged_clauses.filter(c => c.severity === "CRITICAL").length : 0;
-    
+
     const criticalFlagsCount = document.getElementById("critical-flags-count");
     if (criticalFlagsCount) criticalFlagsCount.textContent = `${criticalCount} Critical Flags`;
-    
+
     const criticalPill = document.getElementById("critical-flags-pill");
     if (criticalPill) {
-        if (criticalCount > 0) {
-            criticalPill.classList.add("red", "active");
-        } else {
-            criticalPill.classList.remove("red", "active");
-        }
+      if (criticalCount > 0) {
+        criticalPill.classList.add("red", "active");
+      } else {
+        criticalPill.classList.remove("red", "active");
+      }
     }
-    
+
     const standardClausesCount = document.getElementById("standard-clauses-count");
     if (standardClausesCount) standardClausesCount.textContent = `${flaggedCount} Total Flags`;
 
     const findingsGrid = document.getElementById("findings-grid");
     if (findingsGrid) {
-        findingsGrid.innerHTML = "";
-        
-        if (data.flagged_clauses && data.flagged_clauses.length > 0) {
-            data.flagged_clauses.slice(0, 4).forEach((clause, i) => {
-                const article = document.createElement("article");
-                article.className = `finding-card reveal reveal-delay-${i + 1}`;
-                
-                let riskClass = "caution";
-                if (clause.severity === "CRITICAL") riskClass = "critical";
-                else if (clause.severity === "HIGH") riskClass = "warning";
-                
-                if (i === 0 && clause.severity === "CRITICAL") article.classList.add("finding-card-featured", "risk-critical");
-                else article.classList.add(`risk-${riskClass}`);
-                
-                const typeFormat = clause.type.replace(/_/g, " ");
-                const typeCap = typeFormat.charAt(0) + typeFormat.slice(1).toLowerCase();
-                
-                article.innerHTML = `
+      findingsGrid.innerHTML = "";
+
+      if (data.flagged_clauses && data.flagged_clauses.length > 0) {
+        data.flagged_clauses.slice(0, 4).forEach((clause, i) => {
+          const article = document.createElement("article");
+          article.className = `finding-card reveal reveal-delay-${i + 1}`;
+
+          let riskClass = "caution";
+          if (clause.severity === "CRITICAL") riskClass = "critical";
+          else if (clause.severity === "HIGH") riskClass = "warning";
+
+          if (i === 0 && clause.severity === "CRITICAL") article.classList.add("finding-card-featured", "risk-critical");
+          else article.classList.add(`risk-${riskClass}`);
+
+          const typeFormat = clause.type.replace(/_/g, " ");
+          const typeCap = typeFormat.charAt(0) + typeFormat.slice(1).toLowerCase();
+
+          article.innerHTML = `
                     <div class="finding-head">
                         <span class="risk-badge ${riskClass}">${clause.severity.charAt(0) + clause.severity.slice(1).toLowerCase()}</span>
                         <span class="finding-icon" aria-hidden="true">${Math.round(clause.confidence * 100)}%</span>
@@ -628,14 +663,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     <div class="legal-box">“${clause.original_text}”</div>
                     <button class="text-link" data-screen="clause">View full clause</button>
                 `;
-                
-                findingsGrid.appendChild(article);
-            });
-        } else {
-            // Render a safe state card when no flags are found
-            const article = document.createElement("article");
-            article.className = `finding-card reveal reveal-delay-1 risk-safe`;
-            article.innerHTML = `
+
+          findingsGrid.appendChild(article);
+        });
+      } else {
+        // Render a safe state card when no flags are found
+        const article = document.createElement("article");
+        article.className = `finding-card reveal reveal-delay-1 risk-safe`;
+        article.innerHTML = `
                 <div class="finding-head">
                     <span class="risk-badge safe">Low</span>
                     <span class="finding-icon" aria-hidden="true"><span class="material-symbols-rounded">check_circle</span></span>
@@ -647,33 +682,33 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="legal-box">“No flagged clauses were detected by the system.”</div>
                 <button class="text-link" data-screen="clause">View analysis</button>
             `;
-            findingsGrid.appendChild(article);
-        }
-        
-        revealOnScroll();
+        findingsGrid.appendChild(article);
+      }
+
+      revealOnScroll();
     }
-    
+
     clauses.length = 0;
     if (data.flagged_clauses) {
-        data.flagged_clauses.forEach(c => {
-            const typeFormat = c.type.replace(/_/g, " ");
-            clauses.push({
-                badge: c.severity,
-                title: typeFormat.charAt(0) + typeFormat.slice(1).toLowerCase(),
-                subtitle: state.uploadedFileName,
-                original: `“${c.original_text}”`,
-                plain: c.translation || c.original_text,
-                impacts: [
-                    ["Risk level", `Severity: ${c.severity}. Confidence: ${Math.round(c.confidence * 100)}%.`],
-                    ["Detected by", c.source === "distilbert" ? "Custom DistilBERT model trained on legal contracts." : "Deterministic rule-based classifier."]
-                ]
-            });
+      data.flagged_clauses.forEach(c => {
+        const typeFormat = c.type.replace(/_/g, " ");
+        clauses.push({
+          badge: c.severity,
+          title: typeFormat.charAt(0) + typeFormat.slice(1).toLowerCase(),
+          subtitle: state.uploadedFileName,
+          original: `“${c.original_text}”`,
+          plain: c.translation || c.original_text,
+          impacts: [
+            ["Risk level", `Severity: ${c.severity}. Confidence: ${Math.round(c.confidence * 100)}%.`],
+            ["Detected by", c.source === "distilbert" ? "Custom DistilBERT model trained on legal contracts." : "Deterministic rule-based classifier."]
+          ]
         });
+      });
     }
     if (clauses.length === 0) {
-        clauses.push({
-            badge: "All clear", title: "No high-risk clauses found", subtitle: state.uploadedFileName, original: "“No flagged clauses were detected in this document.”", plain: "This document appears to carry low overall risk.", impacts: [["Result", "No significant risk clauses were identified."], ["Recommendation", "Review manually for any domain-specific concerns."]]
-        });
+      clauses.push({
+        badge: "All clear", title: "No high-risk clauses found", subtitle: state.uploadedFileName, original: "“No flagged clauses were detected in this document.”", plain: "This document appears to carry low overall risk.", impacts: [["Result", "No significant risk clauses were identified."], ["Recommendation", "Review manually for any domain-specific concerns."]]
+      });
     }
     state.clauseIndex = 0;
   }
@@ -681,69 +716,103 @@ document.addEventListener("DOMContentLoaded", () => {
   async function simulateProcessing() {
     state.scoreAnimated = false;
     processingTitle.textContent = "Analyzing your document";
-    processingStatus.textContent = "Connecting to backend and scoring risk...";
+    resetProcessingState();
     setScreen("processing");
 
     try {
-        const data = await callAnalyzeMock();
-        
-        processingStatus.textContent = "Drafting plain-English summary...";
-        await new Promise(resolve => setTimeout(resolve, 800));
+      const data = await callAnalyzeMock();
 
-        mapApiResponse(data);
-        
-        processingStatus.textContent = "Decision brief ready. Opening your results.";
-        await new Promise(resolve => setTimeout(resolve, 400));
-        
-        setScreen("dashboard");
+      updateProcessingStepState({
+        active: "summary",
+        completed: ["layout", "text", "clauses", "risk"],
+        statusText: "Drafting plain-English summary...",
+      });
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      mapApiResponse(data);
+
+      updateProcessingStepState({
+        active: "summary",
+        completed: ["layout", "text", "clauses", "risk", "summary"],
+        statusText: "Decision brief ready. Opening your results.",
+      });
+      await new Promise(resolve => setTimeout(resolve, 400));
+
+      setScreen("dashboard");
     } catch (error) {
-        console.error(error);
-        processingStatus.textContent = "Analysis failed. Please try again or check backend.";
-        showToast("Error connecting to backend");
-        setTimeout(() => setScreen("landing"), 3000);
+      console.error(error);
+      updateProcessingStepState({
+        active: "clauses",
+        completed: ["layout", "text"],
+        failed: "clauses",
+        statusText: "Analysis failed. Please try again or check backend.",
+      });
+      showToast("Error connecting to backend");
+      setTimeout(() => setScreen("landing"), 3000);
     }
   }
 
   async function analyzeFile(file) {
     state.scoreAnimated = false;
     processingTitle.textContent = "Analyzing your document";
-    processingStatus.textContent = "Connecting to backend and scoring risk...";
+    resetProcessingState();
     setScreen("processing");
 
     try {
-        const endpoint = state.dcpActive ? "/api/analyze/dcp" : "/api/analyze";
-        console.log(`[Clarity] Using endpoint: ${endpoint}`);
-        
-        if (state.dcpActive) {
-            console.log("[Clarity] DCP mode enabled, calling /api/analyze/dcp");
-            processingStatus.textContent = "Splitting document into chunks...";
-            await new Promise(resolve => setTimeout(resolve, 600));
-            processingStatus.textContent = "Offloading to DCP network for parallel analysis...";
-            await new Promise(resolve => setTimeout(resolve, 800));
-        }
+      const endpoint = state.dcpActive ? "/api/analyze/dcp" : "/api/analyze";
+      console.log(`[Clarity] Using endpoint: ${endpoint}`);
 
-        const data = await callAnalyzeReal(file, endpoint);
-        console.log("[Clarity] POST response full keys:", Object.keys(data));
-        
-        processingStatus.textContent = "Drafting plain-English summary...";
-        // artificial delay to let user read the status message
+      if (state.dcpActive) {
+        console.log("[Clarity] DCP mode enabled, calling /api/analyze/dcp");
+        updateProcessingStepState({
+          active: "clauses",
+          completed: ["layout", "text"],
+          statusText: "Splitting document into chunks...",
+        });
+        await new Promise(resolve => setTimeout(resolve, 600));
+        updateProcessingStepState({
+          active: "clauses",
+          completed: ["layout", "text"],
+          statusText: "Offloading to DCP network for parallel analysis...",
+        });
         await new Promise(resolve => setTimeout(resolve, 800));
+      }
 
-        mapApiResponse(data);
-        
-        processingStatus.textContent = "Decision brief ready. Opening your results.";
-        await new Promise(resolve => setTimeout(resolve, 400));
-        
-        setScreen("dashboard");
+      const data = await callAnalyzeReal(file, endpoint);
+      console.log("[Clarity] POST response full keys:", Object.keys(data));
+
+      updateProcessingStepState({
+        active: "summary",
+        completed: ["layout", "text", "clauses", "risk"],
+        statusText: "Drafting plain-English summary...",
+      });
+      // artificial delay to let user read the status message
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      mapApiResponse(data);
+
+      updateProcessingStepState({
+        active: "summary",
+        completed: ["layout", "text", "clauses", "risk", "summary"],
+        statusText: "Decision brief ready. Opening your results.",
+      });
+      await new Promise(resolve => setTimeout(resolve, 400));
+
+      setScreen("dashboard");
     } catch (error) {
-        console.error(error);
-        processingStatus.textContent = "Analysis failed. Please try again or check backend.";
-        showToast("Error connecting to backend");
-        // We do NOT navigate back home instantly.
-        // User can click "New Scan" or we can leave a button.
-        // For now, the user stays on the processing screen with the error message.
+      console.error(error);
+      updateProcessingStepState({
+        active: "clauses",
+        completed: ["layout", "text"],
+        failed: "clauses",
+        statusText: "Analysis failed. Please try again or check backend.",
+      });
+      showToast("Error connecting to backend");
+      // We do NOT navigate back home instantly.
+      // User can click "New Scan" or we can leave a button.
+      // For now, the user stays on the processing screen with the error message.
     } finally {
-        state.isProcessing = false;
+      state.isProcessing = false;
     }
   }
 
@@ -751,11 +820,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!file) return;
     if (state.isProcessing) return; // disable repeated submissions while loading
     state.isProcessing = true;
-    
+
     state.uploadedFileName = file.name;
     processingFileName.textContent = file.name;
     showToast(`Added ${file.name}. Starting analysis...`);
-    
+
     // Call the real endpoint instead of simulateProcessing
     analyzeFile(file);
   }
@@ -779,7 +848,7 @@ document.addEventListener("DOMContentLoaded", () => {
     modalShell.setAttribute("aria-hidden", "false");
 
     document.getElementById("modal-close")?.addEventListener("click", closeModal);
-    
+
     if (key === "lawyer") {
       document.getElementById("modal-email-report")?.addEventListener("click", () => {
         const data = state.lastAnalysisData;
@@ -791,7 +860,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const body = encodeURIComponent(generateReportText());
         window.location.href = `mailto:?subject=${subject}&body=${body}`;
       });
-      
+
       document.getElementById("modal-copy-summary")?.addEventListener("click", async () => {
         try {
           await navigator.clipboard.writeText(generateJudgeSummary());
@@ -884,7 +953,7 @@ document.addEventListener("DOMContentLoaded", () => {
       showToast("Please analyze a document first.");
       return;
     }
-    
+
     const blob = new Blob([text], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -947,6 +1016,10 @@ document.addEventListener("DOMContentLoaded", () => {
     checkScroll(); // Check once on load
   }
 
-  updateClauseContent();
-  setScreen("landing");
+
+
+  // Use a small timeout to ensure DOM is fully laid out before observing for reveals
+  setTimeout(() => {
+    setScreen("landing");
+  }, 50);
 });
