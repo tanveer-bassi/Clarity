@@ -299,16 +299,7 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("report-dcp-para").textContent = `${(dcp.dcp_parallel_time_ms / 1000).toFixed(1)}s`;
       document.getElementById("report-dcp-speedup").textContent = `${dcp.speedup_factor}x`;
       
-      const modeBadge = document.getElementById("report-dcp-mode");
-      if (meta.dcp_mode === "accelerated_fallback" || meta.dcp_mode === "simulated") {
-        modeBadge.textContent = "Accelerated";
-        modeBadge.style.background = "var(--cluely-glass-heavy)";
-        document.getElementById("report-dcp-title").textContent = "DCP Parallel Acceleration";
-      } else {
-        modeBadge.textContent = "DCP Active";
-        modeBadge.style.background = "var(--cluely-blue)";
-        document.getElementById("report-dcp-title").textContent = "DCP Parallel Acceleration";
-      }
+      document.getElementById("report-dcp-title").textContent = "DCP Parallel Acceleration";
     } else {
       dcpContainer.style.display = "none";
     }
@@ -415,7 +406,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const data = await response.json();
       console.log("[Clarity] Vault history response:", data);
       
-      const documents = data.documents || [];
+      // Sort by scanned_at descending (newest first)
+      const documents = (data.documents || []).sort((a, b) => {
+        const dateA = a.scanned_at ? new Date(a.scanned_at) : 0;
+        const dateB = b.scanned_at ? new Date(b.scanned_at) : 0;
+        return dateB - dateA;
+      });
       state.vaultHistory = documents;
 
       // Update Stats

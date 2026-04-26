@@ -60,6 +60,7 @@ class AnalysisResponse(BaseModel):
     risk_score_numeric: int = Field(..., ge=0, le=100)
     summary_plain_english: str
     flagged_clauses: List[FlaggedClause]
+    dcp_metrics: Optional[DCPMetrics] = None
     processing_metadata: ProcessingMetadata
 
 
@@ -86,6 +87,7 @@ class HistoryItem(BaseModel):
     # Full analysis fields for detail view
     summary_plain_english: Optional[str] = None
     flagged_clauses: Optional[List[FlaggedClause]] = None
+    dcp_metrics: Optional[DCPMetrics] = None
     processing_metadata: Optional[ProcessingMetadata] = None
 
 
