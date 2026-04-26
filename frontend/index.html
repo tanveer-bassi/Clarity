@@ -55,13 +55,15 @@
                     <button class="btn btn-secondary btn-large" data-screen="vault">View Vault</button>
                 </div>
 
-                <div class="dcp-toggle-container centered reveal reveal-delay-2">
-                    <label class="dcp-toggle">
-                        <input type="checkbox" id="dcp-toggle-input">
-                        <span class="dcp-slider"></span>
-                        <span class="dcp-label">Use DCP parallel processing</span>
-                    </label>
-                    <p class="dcp-helper">Splits long documents into page chunks and estimates parallel analysis speedup.</p>
+                <div class="dcp-hero-control reveal reveal-delay-2">
+                    <div class="dcp-pill">
+                        <span class="dcp-pill-label">Use DCP parallel processing</span>
+                        <label class="dcp-switch">
+                            <input type="checkbox" id="dcp-toggle-input">
+                            <span class="dcp-slider round"></span>
+                        </label>
+                    </div>
+                    <p class="dcp-pill-help">Splits long documents into page chunks and estimates parallel analysis speedup.</p>
                 </div>
 
                 <div class="how-it-works reveal reveal-delay-3">
@@ -264,24 +266,23 @@
                                             <circle class="ring-progress" cx="110" cy="110" r="92"></circle>
                                         </svg>
                                         <div class="score-center">
-                                            <div class="score-number" id="score-number">82</div>
+                                            <div class="score-number" id="score-number">--</div>
                                             <div class="score-label">Risk Score</div>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="discovery-copy">
                                     <div class="eyebrow">Executive Verdict</div>
-                                    <h2 id="discovery-headline">High-Risk Exposure Detected</h2>
-                                    <p id="discovery-summary">This document contains asymmetric liability structures and aggressive termination
-                                        hooks. We recommend a professional legal review before execution.</p>
+                                    <h2 id="discovery-headline">Analysis Complete</h2>
+                                    <p id="discovery-summary">The document has been reviewed. See the flagged clauses below.</p>
                                     <div class="discovery-tags">
                                         <div class="discovery-tag-pill active red" id="critical-flags-pill">
                                             <span class="material-symbols-rounded">warning</span>
-                                            <span id="critical-flags-count">3 Critical Flags</span>
+                                            <span id="critical-flags-count">0 Flags</span>
                                         </div>
                                         <div class="discovery-tag-pill" id="standard-clauses-pill">
                                             <span class="material-symbols-rounded">verified</span>
-                                            <span id="standard-clauses-count">14 Standard Clauses</span>
+                                            <span id="standard-clauses-count">0 Clauses</span>
                                         </div>
                                     </div>
                                     <div class="discovery-actions">
@@ -535,8 +536,7 @@
                         <div class="dcp-metrics-card">
                             <div class="dcp-metrics-header">
                                 <span class="material-symbols-rounded">speed</span>
-                                <h4 id="report-dcp-title">DCP Parallel Speedup</h4>
-                                <span class="badge" id="report-dcp-mode">Simulated</span>
+                                <h4 id="report-dcp-title">DCP Parallel Acceleration</h4>
                             </div>
                             <div class="dcp-metrics-grid">
                                 <div class="dcp-metric">

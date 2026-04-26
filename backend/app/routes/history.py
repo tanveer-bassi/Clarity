@@ -36,6 +36,7 @@ async def get_history(user_id: str):
             # Full fields for detail view
             summary_plain_english=item.get("summary_plain_english"),
             flagged_clauses=item.get("flagged_clauses"),
+            dcp_metrics=item.get("dcp_metrics"),
             processing_metadata=item.get("processing_metadata"),
         )
         for item in items

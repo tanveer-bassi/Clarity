@@ -104,55 +104,14 @@ def _mock_save(user_id: str, analysis: dict) -> None:
         record["flagged_count"] = len(analysis.get("flagged_clauses", []))
         
     _mock_store[user_id].append(record)
+    logger.info("[Vault] Saved analysis for user %s: %s", user_id, record.get("filename", "unknown"))
 
 
 def _mock_history(user_id: str) -> list[dict]:
-    """Return in-memory history, or seed some demo entries."""
-    if user_id in _mock_store and _mock_store[user_id]:
-        return _mock_store[user_id]
-
-    # Seed demo data so the UI always has something to show
-    return [
-        {
-            "document_id": "doc_38201",
-            "filename": "Hospital_Consent_Form.pdf",
-            "overall_risk_score": "HIGH",
-            "risk_score_numeric": 74,
-            "flagged_count": 5,
-            "summary_plain_english": "High risk detected in liability waivers and arbitration requirements. This document significantly limits your right to sue for malpractice.",
-            "flagged_clauses": [
-                {"type": "Liability Limitation", "severity": "HIGH", "original_text": "Facility is not liable for any injury...", "translation": "They are trying to avoid paying if they hurt you.", "confidence": 0.95}
-            ],
-            "processing_metadata": {"ocr_mode": "pdf_text_extraction", "model_source": "distilbert", "endpoint_mode": "mock", "used_distilbert": True, "used_vision": False, "used_gemma": False, "used_backboard": False},
-            "scanned_at": "2026-04-24T14:30:00Z",
-        },
-        {
-            "document_id": "doc_29104",
-            "filename": "Apartment_Lease_Agreement.pdf",
-            "overall_risk_score": "MEDIUM",
-            "risk_score_numeric": 48,
-            "flagged_count": 3,
-            "summary_plain_english": "Moderate risk found in security deposit return terms and early termination penalties.",
-            "flagged_clauses": [
-                {"type": "Termination Penalty", "severity": "MEDIUM", "original_text": "3 months rent penalty for early exit.", "translation": "Moving out early will cost you 3 months of rent.", "confidence": 0.88}
-            ],
-            "processing_metadata": {"ocr_mode": "pdf_text_extraction", "model_source": "distilbert", "endpoint_mode": "mock", "used_distilbert": True, "used_vision": False, "used_gemma": False, "used_backboard": False},
-            "scanned_at": "2026-04-22T09:15:00Z",
-        },
-        {
-            "document_id": "doc_15773",
-            "filename": "Employment_Offer_Letter.pdf",
-            "overall_risk_score": "LOW",
-            "risk_score_numeric": 22,
-            "flagged_count": 1,
-            "summary_plain_english": "Low risk document. Standard at-will employment terms detected.",
-            "flagged_clauses": [
-                {"type": "At-Will Employment", "severity": "LOW", "original_text": "Employment may be terminated by either party...", "translation": "Either you or the company can end the job at any time.", "confidence": 0.92}
-            ],
-            "processing_metadata": {"ocr_mode": "pdf_text_extraction", "model_source": "distilbert", "endpoint_mode": "mock", "used_distilbert": True, "used_vision": False, "used_gemma": False, "used_backboard": False},
-            "scanned_at": "2026-04-20T16:45:00Z",
-        },
-    ]
+    """Return in-memory history."""
+    items = _mock_store.get(user_id, [])
+    logger.info("[Vault] Returning %d history items for %s", len(items), user_id)
+    return items
 
 
 # ---------------------------------------------------------------------------
@@ -168,11 +127,15 @@ async def save_document_analysis(
 
     Returns (success, used_backboard).
     """
+    filename = analysis.get("filename", "unknown")
+    logger.info("[Vault] Saving analysis for user %s: %s", user_id, filename)
+    
     if _backboard_available():
         ok = await _real_save(user_id, analysis)
         if ok:
             return True, True
         # If it failed, it already fell back to mock in _real_save
+        logger.info("[Vault] Backboard failed, saved to local fallback")
         return True, False
 
     _mock_save(user_id, analysis)

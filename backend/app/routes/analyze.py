@@ -246,7 +246,7 @@ async def analyze_dcp(
         for c in flagged_explained
     ]
 
-    return DCPAnalysisResponse(
+    response = DCPAnalysisResponse(
         document_id=_make_doc_id(),
         overall_risk_score=risk_label,
         risk_score_numeric=risk_numeric,
@@ -266,3 +266,17 @@ async def analyze_dcp(
             endpoint_mode="real_analyze_dcp",
         ),
     )
+
+    # --- Step 8: Save to vault ---
+    analysis_dict = response.model_dump()
+    analysis_dict["filename"] = file.filename or "Uploaded Document (DCP)"
+    
+    _, used_backboard = await backboard_service.save_document_analysis(
+        user_id or "demo_user", 
+        analysis_dict
+    )
+    
+    # Update the live response object with the final backboard status
+    response.processing_metadata.used_backboard = used_backboard
+
+    return response
