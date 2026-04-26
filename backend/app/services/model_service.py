@@ -206,6 +206,23 @@ RULE_PATTERNS: dict[str, list[str]] = {
         "incidental damages",
         "disclaims all liability",
     ],
+    "EMPLOYMENT_RESTRICTION": [
+        "non-compete",
+        "non-solicit",
+        "competing business",
+        "restricted period",
+        "may not work for a competitor",
+        "solicit customers",
+        "solicit employees",
+    ],
+    "TERMINATION": [
+        "contract termination",
+        "terminate this agreement",
+        "upon termination",
+        "cancel this contract",
+        "right to terminate",
+        "immediate termination",
+    ],
 }
 
 
@@ -316,6 +333,15 @@ def hybrid_predict(clauses: List[str], top_n: int = 5) -> List[dict]:
                 elif existing["source"] == "rule":
                     existing["source"] = "merged"
             else:
+                # Deterministic hallucination shield:
+                # If a category is historically noisy or high-risk, we REQUIRE a rule hit.
+                # If there's no rule hit (not in 'seen'), we discard the DistilBERT prediction.
+                if category in [
+                    "FINANCIAL_LIABILITY", "WAIVER_OF_RIGHTS", "ARBITRATION", 
+                    "LIABILITY_LIMITATION", "EMPLOYMENT_RESTRICTION", "TERMINATION"
+                ]:
+                    continue
+
                 seen[key] = {
                     "type": category,
                     "original_text": clause,
@@ -324,10 +350,17 @@ def hybrid_predict(clauses: List[str], top_n: int = 5) -> List[dict]:
                     "source": "distilbert",
                 }
 
+    # Deduplicate by category: keep the highest confidence hit for each category
+    deduped: dict[str, dict] = {}
+    for item in seen.values():
+        cat = item["type"]
+        if cat not in deduped or item["confidence"] > deduped[cat]["confidence"]:
+            deduped[cat] = item
+
     # Sort: CRITICAL > HIGH > MEDIUM > LOW, then by confidence descending
     severity_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
     results = sorted(
-        seen.values(),
+        deduped.values(),
         key=lambda x: (severity_order.get(x["severity"], 9), -x["confidence"]),
     )
 

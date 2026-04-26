@@ -22,7 +22,8 @@ _mock_store: dict[str, list[dict]] = {}
 
 
 def _backboard_available() -> bool:
-    return bool(os.getenv("BACKBOARD_API_KEY"))
+    key = os.getenv("BACKBOARD_API_KEY", "")
+    return bool(key and not key.startswith("your-"))
 
 
 # ---------------------------------------------------------------------------

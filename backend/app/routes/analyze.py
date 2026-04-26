@@ -86,7 +86,7 @@ async def analyze_document(
     _validate_file(file)
 
     # --- Step 1: Extract text ---
-    raw_text, used_vision = await vision_service.extract_text_from_upload(file)
+    raw_text, used_vision, ocr_mode = await vision_service.extract_text_from_upload(file)
 
     if not raw_text.strip():
         raise HTTPException(status_code=422, detail="Could not extract text from the uploaded file.")
@@ -115,6 +115,11 @@ async def analyze_document(
     # --- Step 7: Build response ---
     doc_id = _make_doc_id()
     elapsed_ms = int((time.perf_counter() - start) * 1000)
+    
+    # Generate a preview of the text
+    preview = raw_text.replace('\n', ' ')
+    if len(preview) > 250:
+        preview = preview[:250] + "..."
 
     flagged_clauses = [
         FlaggedClause(
@@ -141,6 +146,10 @@ async def analyze_document(
             used_backboard=False,  # Updated below
             used_dcp=False,
             processing_time_ms=elapsed_ms,
+            ocr_mode=ocr_mode,
+            model_source=model_service.get_model_source(),
+            endpoint_mode="real_analyze",
+            extracted_text_preview=preview,
         ),
     )
 

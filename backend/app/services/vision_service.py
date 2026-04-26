@@ -57,8 +57,8 @@ async def _real_extract(file: UploadFile) -> str:
             return texts[0].description
         return ""
     except Exception as exc:
-        logger.error("Vision API error: %s — falling back to mock", exc)
-        return _mock_text()
+        logger.error("Vision API error: %s — returning None", exc)
+        return None
 
 
 # ---------------------------------------------------------------------------
@@ -98,22 +98,55 @@ def _mock_text() -> str:
     return MOCK_OCR_TEXT.strip()
 
 
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
+import io
+from typing import Literal
 
+# Type alias for OCR mode reporting
+OcrMode = Literal["google_vision", "pdf_text_extraction", "fallback_mock"]
 
-async def extract_text_from_upload(file: UploadFile) -> tuple[str, bool]:
+def _extract_pdf_text(content: bytes) -> str | None:
+    """Extract text from a PDF using PyPDF2. Returns text or None."""
+    try:
+        from PyPDF2 import PdfReader
+        reader = PdfReader(io.BytesIO(content))
+        pages_text = []
+        for page in reader.pages:
+            text = page.extract_text()
+            if text:
+                pages_text.append(text.strip())
+        full_text = "\n\n".join(pages_text).strip()
+        if len(full_text) > 20:
+            return full_text
+        return None
+    except Exception as exc:
+        logger.warning("PyPDF2 extraction failed: %s", exc)
+        return None
+
+async def extract_text_from_upload(file: UploadFile) -> tuple[str, bool, OcrMode]:
     """
-    Extract text from an uploaded file.
-
-    Returns (extracted_text, used_google_vision).
+    Extract text from an uploaded file using a cascading strategy.
+    Returns (extracted_text, used_google_vision, ocr_mode).
     """
+    content = await file.read()
+    await file.seek(0)
+
+    filename = (file.filename or "").lower()
+    is_pdf = filename.endswith(".pdf") or file.content_type == "application/pdf"
+
     if _vision_available():
+        logger.info("Attempting Google Cloud Vision OCR...")
         text = await _real_extract(file)
         if text:
-            return text, True
-        # If Vision returned empty, fall back
-        logger.warning("Vision returned empty text; using mock")
+            return text, True, "google_vision"
+        logger.warning("Vision returned empty text; falling back")
 
-    return _mock_text(), False
+    if is_pdf:
+        logger.info("Attempting local PDF text extraction (PyPDF2)...")
+        text = _extract_pdf_text(content)
+        if text:
+            logger.info("PyPDF2 extracted %d chars from PDF", len(text))
+            return text, False, "pdf_text_extraction"
+        logger.warning("PyPDF2 could not extract text (scanned PDF or image-only?)")
+
+    logger.warning("No text extraction succeeded for '%s' — returning mock OCR text.", file.filename)
+    return _mock_text(), False, "fallback_mock"

@@ -53,10 +53,14 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:5173",
+        "http://localhost:5174",
+        "http://localhost:5175",
         "http://localhost:5500",
         "http://localhost:8080",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",
+        "http://127.0.0.1:5175",
         "http://127.0.0.1:5500",
         "http://127.0.0.1:8080",
         "*",  # Allow all during hackathon — tighten for production
@@ -113,12 +117,12 @@ async def health_check():
         model_source=get_model_source(),
         integrations={
             "google_vision": bool(
-                os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-                or os.getenv("GOOGLE_CLOUD_VISION_KEY")
+                (os.getenv("GOOGLE_APPLICATION_CREDENTIALS") and not os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "").startswith("/path/to"))
+                or (os.getenv("GOOGLE_CLOUD_VISION_KEY") and not os.getenv("GOOGLE_CLOUD_VISION_KEY", "").startswith("your-"))
             ),
-            "gemma": bool(os.getenv("GEMINI_API_KEY")),
-            "backboard": bool(os.getenv("BACKBOARD_API_KEY")),
-            "dcp": bool(os.getenv("DCP_API_KEY")),
+            "gemma": bool(os.getenv("GEMINI_API_KEY") and not os.getenv("GEMINI_API_KEY", "").startswith("your-")),
+            "backboard": bool(os.getenv("BACKBOARD_API_KEY") and not os.getenv("BACKBOARD_API_KEY", "").startswith("your-")),
+            "dcp": bool(os.getenv("DCP_API_KEY") and not os.getenv("DCP_API_KEY", "").startswith("your-")),
         },
     )
 

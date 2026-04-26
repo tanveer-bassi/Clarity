@@ -269,17 +269,17 @@
                                 </div>
                                 <div class="discovery-copy">
                                     <div class="eyebrow">Executive Verdict</div>
-                                    <h2>High-Risk Exposure Detected</h2>
-                                    <p>This document contains asymmetric liability structures and aggressive termination
+                                    <h2 id="discovery-headline">High-Risk Exposure Detected</h2>
+                                    <p id="discovery-summary">This document contains asymmetric liability structures and aggressive termination
                                         hooks. We recommend a professional legal review before execution.</p>
                                     <div class="discovery-tags">
-                                        <div class="discovery-tag-pill active red">
+                                        <div class="discovery-tag-pill active red" id="critical-flags-pill">
                                             <span class="material-symbols-rounded">warning</span>
-                                            3 Critical Flags
+                                            <span id="critical-flags-count">3 Critical Flags</span>
                                         </div>
-                                        <div class="discovery-tag-pill">
+                                        <div class="discovery-tag-pill" id="standard-clauses-pill">
                                             <span class="material-symbols-rounded">verified</span>
-                                            14 Standard Clauses
+                                            <span id="standard-clauses-count">14 Standard Clauses</span>
                                         </div>
                                     </div>
                                     <div class="discovery-actions">
@@ -305,75 +305,8 @@
                         </p>
                     </div>
 
-                    <section class="findings-grid findings-grid-dashboard">
-                        <!-- Cards -->
-                        <article class="finding-card finding-card-featured risk-critical reveal">
-                            <div class="finding-head">
-                                <span class="risk-badge critical">Critical</span>
-                                <span class="finding-icon" aria-hidden="true">!</span>
-                            </div>
-                            <div class="finding-copy">
-                                <h3>Uncapped liability</h3>
-                                <p class="finding-summary"><strong>Plain English:</strong> You could be exposed to
-                                    unlimited
-                                    cost if something goes
-                                    wrong.</p>
-                            </div>
-                            <div class="legal-box">“Tenant shall be liable for all damages, whether direct or indirect,
-                                without
-                                limitation of any kind...”</div>
-                            <button class="text-link" data-screen="clause">View full clause</button>
-                        </article>
-
-                        <article class="finding-card risk-warning reveal reveal-delay-2">
-                            <div class="finding-head">
-                                <span class="risk-badge warning">Warning</span>
-                                <span class="finding-icon" aria-hidden="true">24h</span>
-                            </div>
-                            <div class="finding-copy">
-                                <h3>24-hour termination</h3>
-                                <p class="finding-summary"><strong>Plain English:</strong> The other party can end the
-                                    agreement almost immediately.</p>
-                            </div>
-                            <div class="legal-box">“Landlord may terminate this lease for convenience with 24 hours
-                                written
-                                notice...”</div>
-                            <button class="text-link" data-screen="clause">View full clause</button>
-                        </article>
-
-                        <article class="finding-card risk-warning reveal reveal-delay-3">
-                            <div class="finding-head">
-                                <span class="risk-badge warning">Warning</span>
-                                <span class="finding-icon" aria-hidden="true">+15%</span>
-                            </div>
-                            <div class="finding-copy">
-                                <h3>Aggressive rent escalator</h3>
-                                <p class="finding-summary"><strong>Plain English:</strong> Your costs will rise faster
-                                    than
-                                    normal inflation every year.</p>
-                            </div>
-                            <div class="legal-box">“Rent shall increase by 15% annually or CPI plus 10%, whichever is
-                                greater...”</div>
-                            <button class="text-link" data-screen="clause">View full clause</button>
-                        </article>
-
-                        <article class="finding-card risk-caution reveal reveal-delay-4">
-                            <div class="finding-head">
-                                <span class="risk-badge caution">Caution</span>
-                                <span class="finding-icon" aria-hidden="true">ADR</span>
-                            </div>
-                            <div class="finding-copy">
-                                <h3>Mandatory Arbitration</h3>
-                                <p class="finding-summary"><strong>Plain English:</strong> You waive your right to a
-                                    jury
-                                    trial for any legal issues.</p>
-                            </div>
-                            <div class="legal-box">“All disputes shall be settled by binding arbitration in Delaware
-                                under
-                                AAA
-                                rules...”</div>
-                            <button class="text-link" data-screen="clause">View full clause</button>
-                        </article>
+                    <section class="findings-grid findings-grid-dashboard" id="findings-grid">
+                        <!-- Cards will be dynamically injected here -->
                     </section>
                 </div>
             </div>
