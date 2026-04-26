@@ -104,12 +104,9 @@ async def analyze_document(
     # --- Step 4: Risk score ---
     risk_numeric, risk_label = model_service.compute_risk_score(flagged_raw)
 
-    # --- Step 5: Plain-English explanations ---
-    flagged_explained, used_gemma = await gemma_service.explain_clauses(flagged_raw)
-
-    # --- Step 6: Summary ---
-    summary, _ = await gemma_service.generate_summary(
-        flagged_explained, risk_numeric, risk_label
+    # --- Step 5: Plain-English explanations & Summary via Gemma ---
+    summary, flagged_explained, used_gemma = await gemma_service.improve_analysis_with_gemma(
+        flagged_raw, risk_numeric, risk_label
     )
 
     # --- Step 7: Build response ---
@@ -129,6 +126,8 @@ async def analyze_document(
             severity=c["severity"],
             confidence=c["confidence"],
             source=c["source"],
+            why_it_matters=c.get("why_it_matters"),
+            suggested_action=c.get("suggested_action"),
         )
         for c in flagged_explained
     ]
@@ -222,9 +221,8 @@ async def analyze_dcp(
     used_distilbert = model_service.is_model_loaded()
 
     risk_numeric, risk_label = model_service.compute_risk_score(flagged_raw)
-    flagged_explained, used_gemma = await gemma_service.explain_clauses(flagged_raw)
-    summary, _ = await gemma_service.generate_summary(
-        flagged_explained, risk_numeric, risk_label
+    summary, flagged_explained, used_gemma = await gemma_service.improve_analysis_with_gemma(
+        flagged_raw, risk_numeric, risk_label
     )
 
     elapsed_ms = int((time.perf_counter() - start) * 1000)
@@ -237,6 +235,8 @@ async def analyze_dcp(
             severity=c["severity"],
             confidence=c["confidence"],
             source=c["source"],
+            why_it_matters=c.get("why_it_matters"),
+            suggested_action=c.get("suggested_action"),
         )
         for c in flagged_explained
     ]

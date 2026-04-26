@@ -379,6 +379,8 @@ document.addEventListener("DOMContentLoaded", () => {
       text += `- Endpoint Mode: ${meta.endpoint_mode || "N/A"}\n`;
       text += `- DistilBERT used: ${meta.used_distilbert}\n`;
       text += `- Google Vision used: ${meta.used_google_vision}\n`;
+      text += `- Gemma used: ${meta.used_gemma}\n`;
+      text += `- Backboard used: ${meta.used_backboard}\n`;
     }
     return text;
   }

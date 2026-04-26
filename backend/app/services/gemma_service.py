@@ -1,15 +1,16 @@
 """
-gemma_service.py — LLM-powered plain-English explanations.
+gemma_service.py — LLM-powered plain-English explanations via Gemma.
 
-If GEMINI_API_KEY is set, calls the Google Gemini / Gemma API.
+If GEMINI_API_KEY is set, calls the Google GenAI API using Gemma models.
 Otherwise uses deterministic fallback translations so the demo always works.
 """
 
 from __future__ import annotations
 
+import json
 import logging
 import os
-from typing import List
+from typing import List, Optional, Tuple
 
 logger = logging.getLogger("clearconsent.gemma")
 
@@ -55,90 +56,161 @@ FALLBACK_SUMMARY_TEMPLATE = (
 )
 
 
-def _gemini_available() -> bool:
+def _is_api_configured() -> bool:
     key = os.getenv("GEMINI_API_KEY", "")
     return bool(key and not key.startswith("your-"))
 
 
+def _get_fallback_translation(clause_type: str) -> str:
+    return FALLBACK_TRANSLATIONS.get(
+        clause_type,
+        "This clause may contain terms that limit your rights or increase your obligations.",
+    )
+
+
 # ---------------------------------------------------------------------------
-# Real Gemini / Gemma calls
+# Real Gemma calls
 # ---------------------------------------------------------------------------
 
+async def improve_analysis_with_gemma(
+    flagged_clauses: List[dict], 
+    risk_score: int, 
+    risk_label: str
+) -> Tuple[str, List[dict], bool]:
+    """
+    Use Gemma to improve the analysis summary and clause translations.
+    Returns (summary, improved_clauses, used_gemma).
+    """
+    if not _is_api_configured():
+        return _apply_fallbacks(flagged_clauses, risk_score, risk_label)
 
-async def _gemini_explain(flagged_clauses: List[dict]) -> List[dict]:
-    """Use Gemini API to generate plain-English explanations."""
-    try:
-        from google import genai  # type: ignore
+    primary_model = os.getenv("GEMMA_MODEL_NAME", "gemma-4-31b-it")
+    fallback_model = "gemma-4-26b-a4b-it"
 
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+    # Prepare input data for Gemma (limited context as requested)
+    input_data = {
+        "overall_risk_score": risk_label,
+        "risk_score_numeric": risk_score,
+        "flagged_clauses": [
+            {
+                "type": c["type"],
+                "severity": c["severity"],
+                "original_text": c["original_text"],
+                "fallback_translation": _get_fallback_translation(c["type"])
+            }
+            for c in flagged_clauses
+        ]
+    }
 
-        for clause in flagged_clauses:
-            if clause.get("translation"):
-                continue  # Already has a translation
+    prompt = f"""You are a consumer-rights legal assistant for Clarity.
+Your goal is to explain complex legal risks in plain, empathetic English.
 
-            prompt = (
-                "You are a consumer-rights assistant. Explain the following legal "
-                "clause in one or two plain-English sentences that a non-lawyer can "
-                "understand. Focus on what the signer is giving up or agreeing to.\n\n"
-                f"Category: {clause['type']}\n"
-                f"Clause: \"{clause['original_text']}\"\n\n"
-                "Plain-English explanation:"
-            )
+Input Data:
+{json.dumps(input_data, indent=2)}
 
+Task:
+1. Provide an overall executive summary (2-3 sentences).
+2. For each clause, provide a clear translation, why it matters, and a suggested action.
+
+Return ONLY strict JSON in this format:
+{{
+  "summary_plain_english": "...",
+  "clause_explanations": [
+    {{
+      "type": "...",
+      "translation": "...",
+      "why_it_matters": "...",
+      "suggested_action": "..."
+    }}
+  ]
+}}
+"""
+
+    for model_name in [primary_model, fallback_model]:
+        try:
+            from google import genai
+            from google.genai import types
+
+            client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+            
             response = client.models.generate_content(
-                model="gemma-3-4b-it",
+                model=model_name,
                 contents=prompt,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json"
+                )
             )
-            clause["translation"] = response.text.strip()
 
-        return flagged_clauses
-    except Exception as exc:
-        logger.warning("Gemini explain failed: %s — using fallback", exc)
-        return _fallback_explain(flagged_clauses)
+            if not response or not response.text:
+                continue
 
+            # Parse JSON
+            try:
+                # Clean possible markdown wrap
+                raw_text = response.text.strip()
+                if raw_text.startswith("```json"):
+                    raw_text = raw_text.split("```json")[1].split("```")[0].strip()
+                elif raw_text.startswith("```"):
+                    raw_text = raw_text.split("```")[1].split("```")[0].strip()
+                
+                gemma_data = json.loads(raw_text)
+                
+                summary = gemma_data.get("summary_plain_english", "")
+                explanations = gemma_data.get("clause_explanations", [])
+                
+                # Merge Gemma explanations back into flagged_clauses
+                # We match by type and index to be safe if types repeat
+                improved_clauses = []
+                for i, c in enumerate(flagged_clauses):
+                    new_clause = c.copy()
+                    # Try to find matching explanation from Gemma
+                    if i < len(explanations):
+                        exp = explanations[i]
+                        new_clause["translation"] = exp.get("translation", _get_fallback_translation(c["type"]))
+                        new_clause["why_it_matters"] = exp.get("why_it_matters", "")
+                        new_clause["suggested_action"] = exp.get("suggested_action", "")
+                    else:
+                        new_clause["translation"] = _get_fallback_translation(c["type"])
+                    
+                    improved_clauses.append(new_clause)
 
-async def _gemini_summary(flagged_clauses: List[dict], risk_score: int, risk_label: str) -> str:
-    """Use Gemini API to generate an overall document summary."""
-    try:
-        from google import genai  # type: ignore
+                if not summary:
+                    summary = _fallback_summary(flagged_clauses, risk_score, risk_label)
 
-        client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+                logger.info("Successfully used Gemma model: %s", model_name)
+                return summary, improved_clauses, True
 
-        clause_descriptions = "\n".join(
-            f"- {c['type']}: \"{c['original_text'][:120]}...\"" for c in flagged_clauses
-        )
+            except (json.JSONDecodeError, KeyError) as e:
+                logger.warning("Gemma JSON parse failed for model %s: %s", model_name, e)
+                continue
 
-        prompt = (
-            "You are a consumer-rights assistant. Summarize the risks of a legal "
-            "document in 2–3 plain-English sentences. The document has a risk score "
-            f"of {risk_score}/100 ({risk_label}).\n\n"
-            f"Flagged clauses:\n{clause_descriptions}\n\n"
-            "Summary:"
-        )
+        except Exception as exc:
+            logger.warning("Gemma call failed for model %s: %s", model_name, exc)
+            continue
 
-        response = client.models.generate_content(
-            model="gemma-3-4b-it",
-            contents=prompt,
-        )
-        return response.text.strip()
-    except Exception as exc:
-        logger.warning("Gemini summary failed: %s — using fallback", exc)
-        return _fallback_summary(flagged_clauses, risk_score, risk_label)
+    # If all models fail
+    return _apply_fallbacks(flagged_clauses, risk_score, risk_label)
 
 
 # ---------------------------------------------------------------------------
 # Fallback implementations
 # ---------------------------------------------------------------------------
 
-
-def _fallback_explain(flagged_clauses: List[dict]) -> List[dict]:
-    for clause in flagged_clauses:
-        if not clause.get("translation"):
-            clause["translation"] = FALLBACK_TRANSLATIONS.get(
-                clause["type"],
-                "This clause may contain terms that limit your rights or increase your obligations.",
-            )
-    return flagged_clauses
+def _apply_fallbacks(
+    flagged_clauses: List[dict], 
+    risk_score: int, 
+    risk_label: str
+) -> Tuple[str, List[dict], bool]:
+    """Helper to apply all fallbacks at once."""
+    improved_clauses = []
+    for c in flagged_clauses:
+        new_clause = c.copy()
+        if not new_clause.get("translation"):
+            new_clause["translation"] = _get_fallback_translation(c["type"])
+        improved_clauses.append(new_clause)
+    
+    summary = _fallback_summary(flagged_clauses, risk_score, risk_label)
+    return summary, improved_clauses, False
 
 
 def _fallback_summary(
@@ -160,31 +232,16 @@ def _fallback_summary(
 
 
 # ---------------------------------------------------------------------------
-# Public API
+# Deprecated/Compatibility API (Optional, keeping for internal references)
 # ---------------------------------------------------------------------------
 
-
 async def explain_clauses(flagged_clauses: List[dict]) -> tuple[List[dict], bool]:
-    """
-    Add plain-English translations to flagged clauses.
-    Returns (clauses_with_translations, used_gemma).
-    """
-    if _gemini_available():
-        result = await _gemini_explain(flagged_clauses)
-        return result, True
-
-    return _fallback_explain(flagged_clauses), False
-
+    # For backward compatibility if needed, but better to use the unified function
+    _, clauses, used = await improve_analysis_with_gemma(flagged_clauses, 0, "UNKNOWN")
+    return clauses, used
 
 async def generate_summary(
     flagged_clauses: List[dict], risk_score: int, risk_label: str
 ) -> tuple[str, bool]:
-    """
-    Generate a plain-English summary of the document.
-    Returns (summary_text, used_gemma).
-    """
-    if _gemini_available():
-        summary = await _gemini_summary(flagged_clauses, risk_score, risk_label)
-        return summary, True
-
-    return _fallback_summary(flagged_clauses, risk_score, risk_label), False
+    summary, _, used = await improve_analysis_with_gemma(flagged_clauses, risk_score, risk_label)
+    return summary, used

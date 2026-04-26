@@ -22,6 +22,8 @@ class FlaggedClause(BaseModel):
     severity: Literal["CRITICAL", "HIGH", "MEDIUM", "LOW"] = "MEDIUM"
     confidence: float = Field(..., ge=0.0, le=1.0)
     source: Literal["rule", "distilbert", "merged"] = "distilbert"
+    why_it_matters: Optional[str] = Field(None, description="Detailed explanation of the risk")
+    suggested_action: Optional[str] = Field(None, description="Recommended next step for the user")
 
 
 class ProcessingMetadata(BaseModel):
