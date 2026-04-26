@@ -31,6 +31,8 @@ ml/**/*.bin
 backend/.venv/
 backend/venv/
 backend/**/*.env
+backend/credentials/
+backend/credentials/*.json
 
 # OS/editor
 .DS_Store
